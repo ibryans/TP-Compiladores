@@ -5,10 +5,10 @@
  * @authors Bryan Santos e Igor Reis - 02/2022
  */
 
-#include<iostream>
-#include<string>
-#include<unordered_map>
-#include<vector>
+#include <iostream>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 using namespace std;
 
@@ -122,7 +122,9 @@ bool isNumber(char c) {}
 
 /** Implementando o autômato (analisador léxico) */
 string getNextToken(char c) {
-    int estado_atual = 0, estado_final = 2;
+    int estado_inicial = 0; 
+    int estado_atual = estado_inicial; 
+    int estado_final = 2;
     string lex = "";
     
     while (estado_atual != estado_final) {
@@ -136,40 +138,61 @@ string getNextToken(char c) {
                     if (c == ' ');
 
                     // Letra ou _ levam a um identificador ou palavra reservada
-                    else if (isLetter(c) || c == '_') { lex = c; estado_atual = 1; }
+                    else if (isLetter(c) || c == '_') { 
+                        lex = c; estado_atual = 1; 
+                    }
 
                     // " (leva a uma string)
-                    else if (c == '\"') { lex = c; estado_atual = 3; }
+                    else if (c == '\"') { 
+                        lex = c; estado_atual = 3; 
+                    }
 
                     // Um dígito
-                    else if (isNumber(c)) { lex = c; estado_atual = 4; }
+                    else if (isNumber(c)) { 
+                        lex = c; estado_atual = 4; 
+                    }
 
                     // Ponto (leva a um número real ".456")
-                    else if (c == '.') { lex = c; estado_atual = 6; }
+                    else if (c == '.') { 
+                        lex = c; estado_atual = 6; 
+                    }
 
                     // >, < ou ! (Pode vir seguido de = ou não)
-                    else if (c == '>' || c == '<' || c == '!') { lex = c; estado_atual = 7; }
+                    else if (c == '>' || c == '<' || c == '!') { 
+                        lex = c; estado_atual = 7; 
+                    }
 
                     // & (AND)
-                    else if (c == '&') { lex = c; estado_atual = 8; }
+                    else if (c == '&') { 
+                        lex = c; estado_atual = 8; 
+                    }
 
                     // | (OR)
-                    else if (c == '|') { lex = c; estado_atual = 9; }
+                    else if (c == '|') { 
+                        lex = c; estado_atual = 9; 
+                    }
 
                     // : (vem seguido de '=' -> atribuição)
-                    else if (c == ':') { lex = c; estado_atual = 10; }
+                    else if (c == ':') { 
+                        lex = c; estado_atual = 10; 
+                    }
 
                     // / (início de comentário)
-                    else if (c == '/') { lex = c; estado_atual = 11; }
+                    else if (c == '/') { 
+                        lex = c; estado_atual = 11; 
+                    }
 
                     // ' (leva a um char)
-                    else if (c == '\'') { lex = c; estado_atual = 12; }
+                    else if (c == '\'') { 
+                        lex = c; estado_atual = 12; 
+                    }
 
                     // Caracteres independentes (+, -, ;, (), [], {}, etc...)
                     else {
                         lex = c;
                         estado_atual = estado_final;
                     }
+
                     break;
 
                 // Letra, Dígito ou sublinhado
@@ -197,8 +220,119 @@ string getNextToken(char c) {
 
                 // Constante numérica
                 case 4: 
-                
+                    while (isNumber(c)) {
+                        lex += c;
+                        cin >> c;
+                    }
+                    if (c == '.') {
+                        lex += c;
+                        estado_atual = 5;
+                    }
+                    else {
+                        // > Devolve o caracter lido
+                        estado_atual = estado_final;
+                    }
                     break;
+
+                // Parte decimal da constante numérica
+                case 5:
+                    while (isNumber(c)) {
+                        lex += c;
+                        cin >> c;
+                    }
+                    // > Devolve o caracter lido
+                    estado_atual = estado_final;
+                    break;
+
+                // Parte decimal do número após começar com '.'
+                case 6:
+                    if (isNumber(c)) {
+                        lex += c;
+                        estado_atual = 5;
+                    }
+                    break;
+
+                
+                case 7:
+                    if (c == '=') {
+                        lex += c;
+                        estado_atual = estado_final;
+                    }
+                    else {
+                        // > Devolve o caracter lido
+                        estado_atual = estado_final;
+                    }
+                    break;
+
+                // && (and)
+                case 8:
+                    if (c == '&') {
+                        lex += c;
+                        estado_atual = estado_final;
+                    }
+                    break;
+
+                // || (or)
+                case 9:
+                    if (c == '|') {
+                        lex += c;
+                        estado_atual = estado_final;
+                    }
+                    break;
+
+                // := (atribuição)
+                case 10:
+                    if (c == '=') {
+                        lex += c;
+                        estado_atual = estado_final;
+                    }
+                    break;
+
+                // Começando comentário (/*)
+                case 11:
+                    if (c == '*') {
+                        lex += c;
+                        estado_atual = 12;
+                    }
+                    break;
+
+                // Fechando comentário (*/)
+                case 12:
+                    while (c != '*') {
+                        lex += c;
+                        cin >> c;
+                    }
+                    lex += c;
+                    estado_atual = 13;
+                    break;
+
+                // Fechando comentário (*/) ou voltando
+                case 13:
+                    if (c == '/') {
+                        estado_atual = estado_inicial;
+                    } 
+                    else {
+                        lex += c;
+                        estado_atual = 12;
+                    }
+                    break;
+
+                // Constante char ('c')
+                case 14:
+                    if (isLetter(c)) {
+                        lex += c;
+                        estado_atual = 15;
+                    }
+                    break;
+
+                // Constante char ('c')
+                case 15:
+                    if (c == '\'') {
+                        lex += c;
+                        estado_atual = estado_final;
+                    }
+                    break;
+
             }
 
         }
