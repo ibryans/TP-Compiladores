@@ -9,6 +9,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <ctype.h>
 
 using namespace std;
 
@@ -102,14 +103,33 @@ class Tabela_simbolos {
             tab_simbolos.insert(make_pair("boolean" , TK_boolean));
         }
 
-        /** Verifica se um lexema já existe na tabela */
+        /** Verifica se um lexema já existe na tabela
+         *  Se nao existir, insere este lexema
+         */
         string pesquisar(string lexema);
 
 };
 
 
-/** Verifica se o caracter lido é válido */
-bool isValidChar(char c) {}
+/** Verifica se o caracter lido é válido 
+ * letras, dígitos, espaço, sublinhado, ponto, vírgula, ponto-e-vírgula, 
+ * dois-pontos, parênteses, colchetes, chaves, mais, menos, aspas, apóstrofo,
+ * barra, barra em pé, arroba, e-comercial, porcentagem, exclamação, interrogação,
+ * maior
+ * --- NAO INCLUSOS ABAIXO: menor e igual, além da quebra de linha (bytes 0Dh e 0Ah) ---
+*/
+bool isValidChar(char c) {
+    if ((c >= 65 && c <= 90)    || // maiusculas
+        (c >= 97 && c <= 122)   || // minusculas
+        (c >= 48 && c <= 57)    || // letras
+         c == 95 || c == 46 || c == 44 || c == 59 ||
+         c == 58 || c == 40 || c == 41 || c == 91 ||
+         c == 45 || c == 34 || c == 39 || c == 47 ||
+         c == 33 || c == 63 || c == 62 || c == 60 ||
+         c == 124 || c == 64 || c == 38 || c == 37 ||
+         c == 93 || c == 123 || c == 125 || c == 43 ||
+    )
+}
 
 
 /** Verifica se o caracter lido é uma letra */
@@ -135,7 +155,7 @@ string getNextToken(char c) {
                 case 0:
 
                     // Caracter em branco
-                    if (c == ' ');
+                    if (c == ' '); // se der pau, tentar isspace(c)
 
                     // Letra ou _ levam a um identificador ou palavra reservada
                     else if (isLetter(c) || c == '_') { 
