@@ -52,15 +52,14 @@ using namespace std;
 #define TK_false            35
 #define TK_boolean          36
 
+int nLinhasCompiladas = 0;
 
 /** Tabela de símbolos, armazenando identificadores e palavras reservadas da linguagem */
 class Tabela_simbolos {
     public:
         /** Tabela hash que mapeia lexema para token */
         unordered_map<string, int> tab_simbolos; 
-
-        Tabela_simbolos();
-        int inserir(string, int);
+        // int inserir(string, int);
 
         /** Construtor: Insere as palavras reservadas na tabela de simbolos */
         Tabela_simbolos() {
@@ -110,52 +109,74 @@ class Tabela_simbolos {
 
 };
 
+Tabela_simbolos tab_simbolos;
 
 /** Verifica se o caracter lido é válido 
  * letras, dígitos, espaço, sublinhado, ponto, vírgula, ponto-e-vírgula, 
  * dois-pontos, parênteses, colchetes, chaves, mais, menos, aspas, apóstrofo,
  * barra, barra em pé, arroba, e-comercial, porcentagem, exclamação, interrogação,
- * maior
- * --- NAO INCLUSOS ABAIXO: menor e igual, além da quebra de linha (bytes 0Dh e 0Ah) ---
+ * maior, menor e igual
+ * --- NAO INCLUSOS ABAIXO: quebra de linha (bytes 0Dh e 0Ah) ---
 */
 bool isValidChar(char c) {
     if ((c >= 65 && c <= 90)    || // maiusculas
         (c >= 97 && c <= 122)   || // minusculas
-        (c >= 48 && c <= 57)    || // letras
-         c == 95 || c == 46 || c == 44 || c == 59 ||
-         c == 58 || c == 40 || c == 41 || c == 91 ||
-         c == 45 || c == 34 || c == 39 || c == 47 ||
-         c == 33 || c == 63 || c == 62 || c == 60 ||
-         c == 124 || c == 64 || c == 38 || c == 37 ||
-         c == 93 || c == 123 || c == 125 || c == 43 ||
-    )
+        (c >= 48 && c <= 57)    || // digitos
+        isspace(c)              || // espaco
+        cin.eof()               ||
+        c == 95 || c == 46 || c == 44 || c == 59 ||
+        c == 58 || c == 40 || c == 41 || c == 91 ||
+        c == 45 || c == 34 || c == 39 || c == 47 ||
+        c == 33 || c == 63 || c == 60 || c == 61 || c == 62 ||
+        c == 124 || c == 64 || c == 38 || c == 37 ||
+        c == 93 || c == 123 || c == 125 || c == 43)
+            return true;
+
+    return false;      
 }
 
 
 /** Verifica se o caracter lido é uma letra */
-bool isLetter(char c) {}
+bool isLetter(char c) {
+    if((c >= 65 && c <= 90) || (c >= 97 && c <= 122))
+        return true;
+    else return false;
+}
 
 
 /** Verifica se o caracter lido é um número */
-bool isNumber(char c) {}
+bool isNumber(char c) {
+    if(c >= 48 && c <= 57)
+        return true;
+    else return false;
+}
 
 
 /** Implementando o autômato (analisador léxico) */
-string getNextToken(char c) {
+string getNextToken() {
     int estado_inicial = 0; 
     int estado_atual = estado_inicial; 
     int estado_final = 2;
     string lex = "";
-    
-    while (estado_atual != estado_final) {
+    char c;
+    bool fim = false;
+
+    while (estado_atual != estado_final && !fim) {
+        c = cin.get(); // leitura do prox caractere
         if (isValidChar(c)) {
+            cout << "char = " << c << endl;
             switch (estado_atual) {
             
                 /** Estado Inicial **/
                 case 0:
-
-                    // Caracter em branco
-                    if (c == ' '); // se der pau, tentar isspace(c)
+                cout << "case 0" << endl;
+                    // Caractere em branco
+                    if (isspace(c)){
+                        if (c == '\n'){
+                            cout << "BARRA N" << endl;
+                            nLinhasCompiladas++;
+                        }
+                    } // se der pau, tentar isspace(c)
 
                     // Letra ou _ levam a um identificador ou palavra reservada
                     else if (isLetter(c) || c == '_') { 
@@ -167,9 +188,14 @@ string getNextToken(char c) {
                         lex = c; estado_atual = 3; 
                     }
 
-                    // Um dígito
-                    else if (isNumber(c)) { 
+                    // Um dígito exceto 0 (leva a num inteiro ou real)
+                    else if (c != '0' && isNumber(c)) { 
                         lex = c; estado_atual = 4; 
+                    }
+
+                    // Digito 0 (pode levar a num inteiro, real ou hexadecimal)
+                    else if (c == '0'){
+                        lex = c; estado_atual = 16;
                     }
 
                     // Ponto (leva a um número real ".456")
@@ -194,43 +220,114 @@ string getNextToken(char c) {
 
                     // : (vem seguido de '=' -> atribuição)
                     else if (c == ':') { 
-                        lex = c; estado_atual = 10; 
+                        lex = c; estado_atual = 10;
                     }
 
-                    // / (início de comentário)
+                    // / (início de comentário ou divisao)
                     else if (c == '/') { 
                         lex = c; estado_atual = 11; 
                     }
 
                     // ' (leva a um char)
                     else if (c == '\'') { 
-                        lex = c; estado_atual = 12; 
+                        lex = c; estado_atual = 14; 
                     }
 
-                    // Caracteres independentes (+, -, ;, (), [], {}, etc...)
-                    else {
+                    // demais tokens
+                    else if(c == ','){
+                        lex = c;
+                        estado_atual = estado_final;
+                    } 
+                    
+                    else if(c == '+'){
+                        lex = c;
+                        estado_atual = estado_final;
+                    } 
+                    
+                    else if(c == '-'){
+                        lex = c;
+                        estado_atual = estado_final;
+                    } 
+
+                    else if(c == '='){
+                        lex = c;
+                        estado_atual = estado_final;
+                    }
+                    
+                    else if(c == ';'){
                         lex = c;
                         estado_atual = estado_final;
                     }
 
+                    else if(c == '*'){
+                        lex = c;
+                        estado_atual = estado_final;
+                    }                    
+                    
+                    else if(c == '('){
+                        lex = c;
+                        estado_atual = estado_final;
+                    } 
+                    
+                    else if(c == ')'){
+                        lex = c;
+                        estado_atual = estado_final;
+                    }
+                    
+                    else if(c == '['){
+                        lex = c;
+                        estado_atual = estado_final;
+                    } 
+                    
+                    else if(c == ']'){
+                        lex = c;
+                        estado_atual = estado_final;
+                    } 
+                    
+                    else if(c == '{'){
+                        lex = c;
+                        estado_atual = estado_final;
+                    } 
+                    
+                    else if(c == '}'){
+                        lex = c;
+                        estado_atual = estado_final;
+                    }
+
+                    else if(cin.eof()){
+                        lex = "eof";
+                        estado_atual = estado_final;
+                    }
+
+                    else {
+                        // erro -> lexema n pertence ao alfabeto
+                        fim = true;
+                        cout << "FIM: erro -> lexema n pertence ao alfabeto\n";
+                        lex += c;
+                    }
                     break;
 
                 // Letra, Dígito ou sublinhado
                 case 1:
+                cout << "case 1" << endl;
                     while(isLetter(c) || isNumber(c) || c == '_') {
                         lex += c;
-                        cin >> c;
+                        c = cin.get();
                     }
                     // > Devolve o caracter lido
+                    if (!cin.eof()) cin.putback(c);
+
                     // > Pesquisa o lex na tabela de simbolos
+                    // tab_simbolos.pesquisar(lex);
                     estado_atual = estado_final;
                     break;
 
                 // Conteúdo da string até o fechamento das aspas
                 case 3:
+                cout << "case 3" << endl;
                     while (c != '\"' && c != '\n') {
                         lex += c;
-                        cin >> c;
+                        c = cin.get();
                     }
                     if (c == '\"') {
                         lex += c;
@@ -240,9 +337,10 @@ string getNextToken(char c) {
 
                 // Constante numérica
                 case 4: 
+                cout << "case 4" << endl;
                     while (isNumber(c)) {
                         lex += c;
-                        cin >> c;
+                        c = cin.get();
                     }
                     if (c == '.') {
                         lex += c;
@@ -250,22 +348,36 @@ string getNextToken(char c) {
                     }
                     else {
                         // > Devolve o caracter lido
+                        if (!cin.eof()) cin.putback(c);
+
                         estado_atual = estado_final;
                     }
                     break;
 
-                // Parte decimal da constante numérica
+                // Parte decimal da constante numérica (apos o .)
                 case 5:
-                    while (isNumber(c)) {
-                        lex += c;
-                        cin >> c;
+                cout << "case 5" << endl;
+                    if (isNumber(c)){
+                        while (isNumber(c)) {
+                            lex += c;
+                            c = cin.get();
+                        }
+
+                        // > Devolve o caracter lido
+                        if (!cin.eof()) cin.putback(c);
+
+                        estado_atual = estado_final;
                     }
-                    // > Devolve o caracter lido
-                    estado_atual = estado_final;
+                    else {
+                        // erro lexema invalido
+                        fim = true;
+                        cout << "FIM: lexema invalido p/ numero real (n eh numero depois do .)";
+                    }                    
                     break;
 
-                // Parte decimal do número após começar com '.'
+                // Parte decimal do número (após começar com '.')
                 case 6:
+                cout << "case 6" << endl;
                     if (isNumber(c)) {
                         lex += c;
                         estado_atual = 5;
@@ -274,18 +386,22 @@ string getNextToken(char c) {
 
                 
                 case 7:
+                cout << "case 7" << endl;
                     if (c == '=') {
                         lex += c;
                         estado_atual = estado_final;
                     }
                     else {
                         // > Devolve o caracter lido
+                        if (!cin.eof()) cin.putback(c);
+
                         estado_atual = estado_final;
                     }
                     break;
 
                 // && (and)
                 case 8:
+                cout << "case 8" << endl;
                     if (c == '&') {
                         lex += c;
                         estado_atual = estado_final;
@@ -294,6 +410,7 @@ string getNextToken(char c) {
 
                 // || (or)
                 case 9:
+                cout << "case 9" << endl;
                     if (c == '|') {
                         lex += c;
                         estado_atual = estado_final;
@@ -302,32 +419,42 @@ string getNextToken(char c) {
 
                 // := (atribuição)
                 case 10:
+                cout << "case 10" << endl;
                     if (c == '=') {
                         lex += c;
                         estado_atual = estado_final;
                     }
                     break;
 
-                // Começando comentário (/*)
+                // Comentário (/*) ou divisao (/)
                 case 11:
-                    if (c == '*') {
+                cout << "case 11" << endl;
+                    if (c == '*') { // comentario
                         lex += c;
                         estado_atual = 12;
                     }
+                    else{ // divisao
+                        // > Devolve caracter lido
+                        if (!cin.eof()) cin.putback(c);
+
+                        estado_atual = estado_final;
+                    }
                     break;
 
-                // Fechando comentário (*/)
+                // Comentário (*/)
                 case 12:
+                cout << "case 12" << endl;
                     while (c != '*') {
                         lex += c;
-                        cin >> c;
+                        c = cin.get();
                     }
                     lex += c;
                     estado_atual = 13;
                     break;
 
-                // Fechando comentário (*/) ou voltando
+                // Fechando comentário (*/) ou voltando p/ estado anterior
                 case 13:
+                cout << "case 13" << endl;
                     if (c == '/') {
                         estado_atual = estado_inicial;
                     } 
@@ -339,6 +466,7 @@ string getNextToken(char c) {
 
                 // Constante char ('c')
                 case 14:
+                cout << "case 14" << endl;
                     if (isLetter(c)) {
                         lex += c;
                         estado_atual = 15;
@@ -347,27 +475,71 @@ string getNextToken(char c) {
 
                 // Constante char ('c')
                 case 15:
+                cout << "case 15" << endl;
                     if (c == '\'') {
                         lex += c;
                         estado_atual = estado_final;
                     }
                     break;
 
+                // Primeiro digito = 0 -> pode ser inteiro, hexadecimal ou real
+                case 16:
+                cout << "case 16" << endl;
+                    while (c == '0'){
+                        lex += c;
+                        c = cin.get();
+                    }
+                    if (c == 'x'){ // Constante hexa
+                        lex += c; estado_atual = 17;
+                    }
+                    else if (c == '.'){ // Constante real iniciada com 0
+                        lex += c; estado_atual = 5;
+                    }
+                    break;
+
+                // Constante hexa - 1o digito
+                case 17:
+                cout << "case 17" << endl;
+                    if (isNumber(c) || (c >= 65 && c <= 70)){
+                        lex += c; estado_atual = 18;
+                    }
+                    break;
+
+                // Constante hexa - 2o digito
+                case 18:
+                cout << "case 18" << endl;
+                    if (isNumber(c) || (c >= 65 && c <= 70)){
+                        lex += c;
+                        estado_atual = estado_final;
+                    }                    
+                    break;
             }
 
         }
-
-        // Lendo o próximo caracter
-        cin >> c;
+        else {
+            fim = true;
+            cout << "FIM: char fora do alfabeto";
+            // erro (char invalido)
+        }
     }
+
+    return lex;
 }
 
 int main(int argc, char const *argv[]) {
-    Tabela_simbolos tab_simbolos;
-    char c;
+    // char c;
 
-    // Ler enquanto não chegar ao final do arquivo
-    while (cin >> c) getNextToken(c);
+    // // Ler enquanto não chegar ao final do arquivo
+    // while (cin >> c){
+    //     cout << "indo p getNextToken" << endl;
+    //     getNextToken();
+    //     nLinhasCompiladas++;
+    //     cout << "saiu de getNextToken" << endl;
+    // }
+
+    getNextToken();
+
+    cout << nLinhasCompiladas << " linhas compiladas";
 
     return 0;
 }

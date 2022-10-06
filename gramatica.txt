@@ -1,0 +1,26 @@
+Precedência:
+
+a) Acesso a posições do string, usando [ ];
+b) parênteses;
+c) conversão de tipos: int(expressão) ou float(expressão);
+d) negação lógica (!);
+e) multiplicação aritmética (*) e lógica (&&), divisão real (/), quociente da divisão (div) e resto da divisão (mod);
+f) subtração (-), adição aritmética (+) e lógica ( || );
+g) comparação aritmética (=,!=,<,>,<=,>=) e entre strings (=).
+
+Gramática:
+
+S -> {Dec | Comandos} EOF
+Dec -> (Dec_var | Dec_const) ;
+Dec_var -> (int | float | char | string) id [:= [-] constante] {, id [:= [-] constante]} | boolean id := (true | false) {, id := (true | false)}
+Dec_const -> const id = [-] constante
+Comandos -> [Atrib | Leitura | Escrita] ; | (Teste | Repeticao)
+Atrib -> id [ "[" Exp "]" ] := Exp
+Leitura -> readln "(" id ")"
+Escrita -> (write | writeln) "(" Exp {, Exp} ")"
+Teste -> if "("Exp")" ( Comandos | "{" {Comandos} "}" ) [ else ( Comandos | "{" {Comandos} "}" ) ]
+Repeticao -> while "("Exp")" ( Comandos | "{" {Comandos} "}" )
+Exp -> ExpS [ (= | != | < | > | <= | >=) ExpS]
+ExpS -> [-] T { (+ | - | "||") T}
+T -> F { (* | && | / | div | mod) F}
+F -> ! F | (int | float) "(" Exp ")" | "(" Exp ")" | id [ "[" Exp "]" ] | constante
