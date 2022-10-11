@@ -293,11 +293,10 @@ string getNextToken() {
                     }
 
                     else {
-                        // Printando o erro -> lexema n identificado
                         lex += c;
                         erro = true;
                         cout << nLinhasCompiladas << endl;
-                        cout << "lexema nao identificado [" << lex << "]" << endl;
+                        cout << "caractere invalido" << endl;
                     }
                     break;
 
@@ -317,7 +316,7 @@ string getNextToken() {
 
                 // Conteúdo da string até o fechamento das aspas
                 case 3:
-                    while (c != '\"' && c != '\n') {
+                    while (c != '\"' && c != '\n' && !cin.eof()) {
                         lex += c;
                         c = cin.get();
                     }
@@ -326,10 +325,14 @@ string getNextToken() {
                         estado_atual = estado_final;
                     } 
                     else if (c == '\n') {
-                        // ERRO -> Caracter inválido
                         erro = true;
                         cout << nLinhasCompiladas << endl;
-                        cout << "caractere invalido" << endl;
+                        cout << "lexema nao identificado [" << lex << "]." << endl;
+                    }
+                    else if (cin.eof()) {
+                        erro = true;
+                        cout << nLinhasCompiladas << endl;
+                        cout << "fim de arquivo nao esperado." << endl;
                     }
                     break;
 
@@ -362,7 +365,7 @@ string getNextToken() {
                     if (lex.length() > 7) {
                         erro = true;
                         cout << nLinhasCompiladas << endl;
-                        cout << "lexema nao identificado [" << lex << "]" << endl;
+                        cout << "lexema nao identificado [" << lex << "]." << endl;
                     }
                     else {
                         // > Devolve o caracter lido
@@ -376,11 +379,17 @@ string getNextToken() {
                     if (isNumber(c)) {
                         lex += c;
                         estado_atual = 5;
-                    } else {
+                    } 
+                    else if (cin.eof()) {
+                        erro = true;
+                        cout << nLinhasCompiladas << endl;
+                        cout << "fim de arquivo nao esperado." << endl;
+                    }
+                    else {
                         // ERRO -> Não tem número depois do ponto
                         erro = true;
                         cout << nLinhasCompiladas << endl;
-                        cout << "caractere invalido" << endl;
+                        cout << "lexema nao identificado [" << lex << "]." << endl;
                     }
                     break;
 
@@ -392,8 +401,14 @@ string getNextToken() {
                     }
                     else {
                         // > Devolve o caracter lido
-                        if (!cin.eof()) cin.putback(c);
-                        estado_atual = estado_final;
+                        if (!cin.eof()) {
+                            cin.putback(c);
+                            estado_atual = estado_final;
+                        } else {
+                            erro = true;
+                            cout << nLinhasCompiladas << endl;
+                            cout << "fim de arquivo nao esperado." << endl;
+                        }
                     }
                     break;
 
@@ -403,10 +418,10 @@ string getNextToken() {
                         lex += c;
                         estado_atual = estado_final;
                     } else {
-                        // Erro: Caracter inválido
+                        // Erro: Não existe '&' na linguagem
                         erro = true;
                         cout << nLinhasCompiladas << endl;
-                        cout << "caractere invalido" << endl;
+                        cout << "lexema nao identificado [" << lex << "]." << endl;
                     }
                     break;
 
@@ -416,10 +431,10 @@ string getNextToken() {
                         lex += c;
                         estado_atual = estado_final;
                     } else {
-                        // Erro: Caracter inválido
+                        // Erro: Não existe '|' na linguagem
                         erro = true;
                         cout << nLinhasCompiladas << endl;
-                        cout << "caractere invalido" << endl;
+                        cout << "lexema nao identificado [" << lex << "]." << endl;
                     }
                     break;
 
@@ -429,10 +444,10 @@ string getNextToken() {
                         lex += c;
                         estado_atual = estado_final;
                     } else {
-                        // Erro: Caracter inválido
+                        // Erro: Não existe só ':' na linguagem
                         erro = true;
                         cout << nLinhasCompiladas << endl;
-                        cout << "caractere invalido" << endl;
+                        cout << "lexema nao identificado [" << lex << "]." << endl;
                     }
                     break;
 
@@ -444,21 +459,33 @@ string getNextToken() {
                     }
                     else { // divisao
                         // > Devolve caracter lido
-                        if (!cin.eof()) cin.putback(c);
-                        estado_atual = estado_final;
+                        if (!cin.eof()) {
+                            cin.putback(c);
+                            estado_atual = estado_final;
+                        } else {
+                            erro = true;
+                            cout << nLinhasCompiladas << endl;
+                            cout << "fim de arquivo nao esperado." << endl;
+                        }
                     }
                     break;
 
                 // Comentário (*/)
                 case 12:
-                    while (c != '*') {
+                    while (c != '*' && isValidChar(c)) {
                         lex += c;
                         // Pode possuir quebras de linha dentro do comentário
                         if (c == '\n') nLinhasCompiladas++;
                         c = cin.get();
                     }
-                    lex += c;
-                    estado_atual = 13;
+                    if (!cin.eof()) {
+                        lex += c;
+                        estado_atual = 13;
+                    } else {
+                        erro = true;
+                        cout << nLinhasCompiladas << endl;
+                        cout << "fim de arquivo nao esperado." << endl;
+                    }
                     break;
 
                 // Fechando comentário (*/) ou voltando p/ estado anterior
@@ -468,8 +495,14 @@ string getNextToken() {
                         estado_atual = estado_inicial;
                     } 
                     else {
-                        lex += c;
-                        estado_atual = 12;
+                        if (!cin.eof()) {
+                            lex += c;
+                            estado_atual = 12;
+                        } else {
+                            erro = true;
+                            cout << nLinhasCompiladas << endl;
+                            cout << "fim de arquivo nao esperado." << endl;
+                        }
                     }
                     break;
 
@@ -488,7 +521,7 @@ string getNextToken() {
                         // ERRO -> Não é uma constante char válida
                         erro = true;
                         cout << nLinhasCompiladas << endl;
-                        cout << "caractere invalido" << endl;
+                        cout << "lexema nao identificado [" << lex << "]." << endl;
                     }
                     break;
 
@@ -519,10 +552,10 @@ string getNextToken() {
                         lex += c; 
                         estado_atual = 18;
                     } else {
-                        // ERRO -> Caracter inválido
+                        // ERRO -> não é um lexema válido (sem número depois do X)
                         erro = true;
                         cout << nLinhasCompiladas << endl;
-                        cout << "caractere invalido" << endl;
+                        cout << "lexema nao identificado [" << lex << "]." << endl;
                     }
                     break;
 
@@ -532,10 +565,10 @@ string getNextToken() {
                         lex += c;
                         estado_atual = estado_final;
                     } else {
-                        // ERRO -> Caracter inválido
+                        // ERRO -> não é um lexema válido (sem o ultimo número)
                         erro = true;
                         cout << nLinhasCompiladas << endl;
-                        cout << "caractere invalido" << endl;
+                        cout << "lexema nao identificado [" << lex << "]." << endl;
                     }
                     break;
 
@@ -543,14 +576,14 @@ string getNextToken() {
                     lex += c;
                     erro = true;
                     cout << nLinhasCompiladas << endl;
-                    cout << "lexema nao identificado [" << lex << "]" << endl;
+                    cout << "lexema nao identificado [" << lex << "]." << endl;
             }
 
         }
         else {
             erro = true;
             cout << nLinhasCompiladas << endl;
-            cout << "caractere invalidonao reconhecido): " << c << endl;
+            cout << "caractere invalido." << endl;
         }
     }
 
@@ -562,21 +595,22 @@ string getNextToken() {
 
 int main(int argc, char const *argv[]) {
     char c;
+    bool erro = false;
 
-    c = cin.get();
     // Ler enquanto não chegar ao final do arquivo
+    c = cin.get();
     while (!cin.eof()){
         cin.putback(c);
         string token = getNextToken();
-        if (strcmp(token.c_str(), "-1") == 0)
+        if (strcmp(token.c_str(), "-1") == 0) {
+            erro = true;
             break;
-        // cout << "token: " << token << endl;
+        }
         c = cin.get();
     }
 
-    getNextToken();
-
-    cout << nLinhasCompiladas << " linhas compiladas.";
+    if (!erro)
+        cout << nLinhasCompiladas << " linhas compiladas.";
 
     return 0;
 }
