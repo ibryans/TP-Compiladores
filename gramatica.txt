@@ -12,8 +12,8 @@ Gramática:
 
 S -> {Dec | Comandos} EOF
 Dec -> (Dec_var | Dec_const) ;
-Dec_var -> (int | float | char | string) id [:= [-] constante] {, id [:= [-] constante]} | boolean id := (true | false) {, id := (true | false)}
-Dec_const -> const id = [-] constante
+Dec_var -> (int | float | char | string) id [:= [-] constante] {, id [:= [-] constante]} | boolean id [:= (true | false)] {, id [:= (true | false)]}
+Dec_const -> const id := [-] Exp (constante?)
 Comandos -> [Atrib | Leitura | Escrita] ; | (Teste | Repeticao)
 Atrib -> id [ "[" Exp "]" ] := Exp
 Leitura -> readln "(" id ")"
