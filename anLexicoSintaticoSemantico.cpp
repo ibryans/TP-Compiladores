@@ -15,10 +15,15 @@
 using namespace std;
 
 /** Tipos de Erro */
-#define INVALID_CHAR    1
-#define INVALID_LEX     2
-#define INVALID_EOF     3
-#define INVALID_TOKEN   4
+#define INVALID_CHAR         1
+#define INVALID_LEX          2
+#define INVALID_EOF          3
+#define INVALID_TOKEN        4
+#define INVALID_STR_SIZE     5
+#define DUPLICATE_ID         6
+#define INCOMPATIBLE_TYPES   7
+#define INCOMPATIBLE_CLASSES 8
+#define UNDECLARED_ID        9
 
 /** Definindo e Enumerando os tokens */
 #define TK_const            1
@@ -62,12 +67,30 @@ using namespace std;
 #define TK_id               39
 #define TK_eof              40
 
+#define tipo_nulo           41
+#define tipo_inteiro        42
+#define tipo_float          43
+#define tipo_caractere      44
+#define tipo_string         45
+#define tipo_boolean        46
+
+#define classe_nula         47
+#define classe_variavel     48
+#define classe_constante    49
+
+// simbolo inserido na TS
+struct Simbolo {
+    int token;
+    int tipo;
+    int classe;
+};
+
 
 /** Tabela de símbolos, armazenando identificadores e palavras reservadas da linguagem */
 class Tabela_simbolos {
     public:
         /** Tabela hash que mapeia lexema para token */
-        unordered_map<string, int> tab_simbolos; 
+        unordered_map<string, Simbolo> tab_simbolos; 
         // int inserir(string, int);
 
         /** Construtor: Insere as palavras reservadas na tabela de simbolos */
@@ -116,7 +139,7 @@ class Tabela_simbolos {
          * Insere um [lex,tok] na tabela de símbolos
         */
         void inserir(string lexema, int token) {
-            tab_simbolos.insert(make_pair(lexema, token));
+            tab_simbolos.insert(make_pair(lexema, Simbolo{token, tipo_nulo, classe_nula}));
         }
 
         /** 
@@ -126,10 +149,10 @@ class Tabela_simbolos {
          */
         int pesquisar(string lexema) {
             int endereco = TK_id;
-            if (tab_simbolos[lexema] == 0){ // novo identificador, insere na tabela
+            if (tab_simbolos[lexema].token == 0){ // novo identificador, insere na tabela
                 inserir(lexema, TK_id);
             } else {    // ja existe na tabela, retorna 
-                endereco = tab_simbolos[lexema];
+                endereco = tab_simbolos[lexema].token;
             }
             return endereco;
         };
@@ -141,6 +164,7 @@ struct RegLex{
     string lexema;
     int token;
     int tipo;
+    int tamanho;
 };
 
 /* Variáveis (globais) do analisador léxico */
@@ -150,9 +174,11 @@ RegLex registroLexico;
 bool erro = false;
 
 /** Método para atualizar o Registro Léxico */
-void updateRegLex(string lexema, int token) {
+void updateRegLex(string lexema, int token, int tipo, int tamanho) {
     registroLexico.lexema = lexema;
     registroLexico.token = token;
+    registroLexico.tipo = tipo;
+    registroLexico.tamanho = tamanho;
 }
 
 /** Verifica se o caracter lido é válido para a linguagem
@@ -204,6 +230,21 @@ void showError(int type, string lex) {
             break;
         case INVALID_TOKEN: 
             cout << "token nao esperado [" << lex << "]." << endl;
+            break;
+        case INVALID_STR_SIZE:
+            cout << "str maior que o permitido (" << lex.length() << " bytes)" << endl;
+            break;
+        case DUPLICATE_ID:
+            cout << "identificador ja declarado [" << lex << "]." << endl;
+            break;
+        case INCOMPATIBLE_TYPES:
+            cout << "tipos incompativeis." << endl;
+            break;
+        case INCOMPATIBLE_CLASSES:
+            cout << "classe de identificador incompatível [" << lex << "]." << endl;
+            break;
+        case UNDECLARED_ID:
+            cout << "identificador nao declarado [" << lex << "]." << endl;
             break;
     }
     exit(0);
@@ -288,79 +329,79 @@ string getNextToken() {
                     // demais tokens
                     else if(c == ','){
                         lex = c;
-                        updateRegLex(lex, TK_virgula);
+                        updateRegLex(lex, TK_virgula, -99, 0);
                         estado_atual = estado_final;
                     } 
                     
                     else if(c == '+'){
                         lex = c;
-                        updateRegLex(lex, TK_mais);
+                        updateRegLex(lex, TK_mais, -99, 0);
                         estado_atual = estado_final;
                     } 
                     
                     else if(c == '-'){
                         lex = c;
-                        updateRegLex(lex, TK_menos);
+                        updateRegLex(lex, TK_menos, -99, 0);
                         estado_atual = estado_final;
                     } 
 
                     else if(c == '='){
                         lex = c;
-                        updateRegLex(lex, TK_igualdade);
+                        updateRegLex(lex, TK_igualdade, -99, 0);
                         estado_atual = estado_final;
                     }
                     
                     else if(c == ';'){
                         lex = c;
-                        updateRegLex(lex, TK_pontoevirgula);
+                        updateRegLex(lex, TK_pontoevirgula, -99, 0);
                         estado_atual = estado_final;
                     }
 
                     else if(c == '*'){
                         lex = c;
-                        updateRegLex(lex, TK_asterisco);
+                        updateRegLex(lex, TK_asterisco, -99, 0);
                         estado_atual = estado_final;
                     }                    
                     
                     else if(c == '('){
                         lex = c;
-                        updateRegLex(lex, TK_abreParentese);
+                        updateRegLex(lex, TK_abreParentese, -99, 0);
                         estado_atual = estado_final;
                     } 
                     
                     else if(c == ')'){
                         lex = c;
-                        updateRegLex(lex, TK_fechaParentese);
+                        updateRegLex(lex, TK_fechaParentese, -99, 0);
                         estado_atual = estado_final;
                     }
                     
                     else if(c == '['){
                         lex = c;
-                        updateRegLex(lex, TK_abreColchete);
+                        updateRegLex(lex, TK_abreColchete, -99, 0);
                         estado_atual = estado_final;
                     } 
                     
                     else if(c == ']'){
                         lex = c;
-                        updateRegLex(lex, TK_fechaColchete);
+                        updateRegLex(lex, TK_fechaColchete, -99, 0);
                         estado_atual = estado_final;
                     } 
                     
                     else if(c == '{'){
                         lex = c;
-                        updateRegLex(lex, TK_abreChave);
+                        updateRegLex(lex, TK_abreChave, -99, 0);
                         estado_atual = estado_final;
                     } 
                     
                     else if(c == '}'){
                         lex = c;
-                        updateRegLex(lex, TK_fechaChave);
+                        updateRegLex(lex, TK_fechaChave, -99, 0);
                         estado_atual = estado_final;
                     }
 
                     else if(cin.eof()){
                         lex = "eof";
-                        updateRegLex(lex, TK_eof);
+                        updateRegLex(lex, TK_eof, -99, 0);
                         estado_atual = estado_final;
                     }
 
@@ -392,7 +433,7 @@ string getNextToken() {
 
                         // Pesquisa o lex na tabela de simbolos pra ver se é uma palavra reservada ou um identificador
                         int tok = tab_simbolos.pesquisar(lex);
-                        updateRegLex(lex, tok);
+                        updateRegLex(lex, tok, -99, 0);
                         estado_atual = estado_final;
                     }
                     
@@ -408,9 +449,13 @@ string getNextToken() {
                         erro = true;
                         showError(INVALID_CHAR, lex);
                     }
+                    else if (lex.length() > 256) {
+                        erro = true;
+                        showError(INVALID_STR_SIZE, lex);
+                    }
                     else if (c == '\"') {
                         lex += c;
-                        updateRegLex(lex, TK_const);
+                        updateRegLex(lex, TK_const, tipo_string, lex.length()-2);
                         estado_atual = estado_final;
                     } 
                     else if (c == '\n') {
@@ -437,7 +482,7 @@ string getNextToken() {
                         // > Devolve o caracter lido
                         if (!cin.eof()) cin.putback(c);
 
-                        updateRegLex(lex, TK_const);
+                        updateRegLex(lex, TK_const, tipo_inteiro, 4);
                         estado_atual = estado_final;
                     }
                     break;
@@ -458,7 +503,7 @@ string getNextToken() {
                         // > Devolve o caracter lido
                         if (!cin.eof()) cin.putback(c);
                         
-                        updateRegLex(lex, TK_const);
+                        updateRegLex(lex, TK_const, tipo_float, 4);
                         estado_atual = estado_final;
                     }
                     break;
@@ -491,7 +536,7 @@ string getNextToken() {
                             tok = TK_menorIgual;
                         else if (lex[0] == '!')
                             tok = TK_diferente;
-                        updateRegLex(lex, tok);
+                        updateRegLex(lex, tok, -99, 0);
                         estado_atual = estado_final;
                     }
                     else {
@@ -504,7 +549,7 @@ string getNextToken() {
                                 tok = TK_menor;
                             else if (lex[0] == '!')
                                 tok = TK_not;
-                            updateRegLex(lex, tok);
+                            updateRegLex(lex, tok, -99, 0);
                             estado_atual = estado_final;
                         } else {
                             erro = true;
@@ -517,7 +562,7 @@ string getNextToken() {
                 case 8:
                     if (c == '&') {
                         lex += c;
-                        updateRegLex(lex, TK_and);
+                        updateRegLex(lex, TK_and, -99, 0);
                         estado_atual = estado_final;
                     } else {
                         // Erro: Não existe '&' na linguagem
@@ -530,7 +575,7 @@ string getNextToken() {
                 case 9:
                     if (c == '|') {
                         lex += c;
-                        updateRegLex(lex, TK_or);
+                        updateRegLex(lex, TK_or, -99, 0);
                         estado_atual = estado_final;
                     } else {
                         // Erro: Não existe '|' na linguagem
@@ -543,7 +588,7 @@ string getNextToken() {
                 case 10:
                     if (c == '=') {
                         lex += c;
-                        updateRegLex(lex, TK_atrib);
+                        updateRegLex(lex, TK_atrib, -99, 0);
                         estado_atual = estado_final;
                     } else {
                         // Erro: Não existe só ':' na linguagem
@@ -562,7 +607,7 @@ string getNextToken() {
                         // > Devolve caracter lido
                         if (!cin.eof()) {
                             cin.putback(c);
-                            updateRegLex(lex, TK_barra);
+                            updateRegLex(lex, TK_barra, -99, 0);
                             estado_atual = estado_final;
                         } else {
                             erro = true;
@@ -617,7 +662,7 @@ string getNextToken() {
                 case 15:
                     if (c == '\'') {
                         lex += c;
-                        updateRegLex(lex, TK_const);
+                        updateRegLex(lex, TK_const, tipo_caractere, 1);
                         estado_atual = estado_final;
                     } else {
                         // ERRO -> Não é uma constante char válida
@@ -643,7 +688,7 @@ string getNextToken() {
                     else {
                         // > Devolve caracter lido
                         if (!cin.eof()) cin.putback(c);
-                        updateRegLex(lex, TK_const);
+                        updateRegLex(lex, TK_const, tipo_inteiro, 4);
                         estado_atual = estado_final;
                     }
                     break;
@@ -654,7 +699,7 @@ string getNextToken() {
                         lex += c; 
                         estado_atual = 18;
                     } else {
-                        // ERRO -> não é um lexema válido (sem número depois do X)
+                        // ERRO -> não é um lexema válido (sem número depois do x)
                         erro = true;
                         if (cin.eof())
                             showError(INVALID_EOF, lex);
@@ -667,7 +712,7 @@ string getNextToken() {
                 case 18:
                     if (isNumber(c) || (c >= 65 && c <= 70) || (c >= 97 && c <= 102)){
                         lex += c;
-                        updateRegLex(lex, TK_const);
+                        updateRegLex(lex, TK_const, tipo_caractere, 1);
                         estado_atual = estado_final;
                     } else {
                         // ERRO -> não é um lexema válido (sem o ultimo número)
@@ -766,55 +811,196 @@ void Dec() {
     // const id = [-] constante
     if(registroLexico.token == TK_const){
         casaToken(TK_const);
+        string lex_id = registroLexico.lexema;
         casaToken(TK_id);
+
+        Simbolo simb_id = tab_simbolos[lex_id];
+
+        // checa se id ja foi declarado
+        if (simb_id.classe == classe_nula) {
+            simb_id.classe = classe_constante; // id ainda nao declarado
+        } 
+        // id ja declarado
+        else showError(DUPLICATE_ID, lex_id);
+
         casaToken(TK_igualdade);
 
+        bool negativo = false; // flag que indica se houve o token '-'
         if(registroLexico.token == TK_menos){
             casaToken(TK_menos);
+            negativo = true;
         }
 
+        // salva copia do reg lexico
+        RegLex rl_const;
+        memcpy(&rl_const, &registroLexico, sizeof(registroLexico));
+
         casaToken(TK_const);
+
+        if (negativo) {
+            // ERRO se a constante nao for um numero
+            if (rl_const.tipo != tipo_inteiro && rl_const.tipo != tipo_float){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // atribui tipo ao simbolo
+            else if (rl_const.tipo == tipo_inteiro){
+                simb_id.tipo = tipo_inteiro;
+            }
+            else simb_id.tipo = tipo_float;
+        } 
+        // nao houve sinal negativo:
+        else if (rl_const.tipo == tipo_inteiro) simb_id.tipo = tipo_inteiro;
+        else if (rl_const.tipo == tipo_float) simb_id.tipo = tipo_float;
+        else if (rl_const.tipo == tipo_string) simb_id.tipo = tipo_string;
+        else if (rl_const.tipo == tipo_caractere) simb_id.tipo = tipo_caractere;
+        else if (rl_const.tipo == tipo_boolean) simb_id.tipo = tipo_boolean;
+        else showError(INCOMPATIBLE_TYPES, "");
+
+        // atualiza TS
+        tab_simbolos[rl_const.lexema] = simb_id;
     }
    
     // (int | float | char | string) id [:= [-] constante] {, id [:= [-] constante]}
     else if(registroLexico.token == TK_int || registroLexico.token == TK_float || registroLexico.token == TK_char || registroLexico.token == TK_string){
-        if (registroLexico.token == TK_int)     
-            casaToken(TK_int);
-        else if(registroLexico.token == TK_float) 
-            casaToken(TK_float);
-        else if(registroLexico.token == TK_char) 
-            casaToken(TK_char);
-        else 
-            casaToken(TK_string);
+        int tipo_id = -99; // variavel auxiliar
 
+        if (registroLexico.token == TK_int){
+            tipo_id = tipo_inteiro;
+            casaToken(TK_int);
+        }
+        else if(registroLexico.token == TK_float){
+            tipo_id = tipo_float;
+            casaToken(TK_float);
+        }
+        else if(registroLexico.token == TK_char){
+            tipo_id = tipo_caractere;
+            casaToken(TK_char);
+        }
+        else{
+            tipo_id = tipo_string;
+            casaToken(TK_string);
+        }
+        
+        string lex_id = registroLexico.lexema;
         casaToken(TK_id);
 
+        Simbolo simb_id = tab_simbolos[lex_id];
+        // checa se id ja foi declarado
+        if (simb_id.classe == classe_nula) {
+            // id ainda nao declarado
+            simb_id.classe = classe_variavel;
+            simb_id.tipo = tipo_id;
+            tab_simbolos[lex_id] = simb_id; // atualiza TS
+        }
+        // id ja declarado
+        else showError(DUPLICATE_ID, lex_id);
+
+        bool negativo = false;
         if (registroLexico.token == TK_atrib){
             casaToken(TK_atrib);
 
-            if(registroLexico.token == TK_menos) 
+            if(registroLexico.token == TK_menos){
                 casaToken(TK_menos);
+                // ERRO se a constante nao for um numero
+                if (simb_id.tipo != tipo_inteiro && simb_id.tipo != tipo_float){
+                    showError(INCOMPATIBLE_TYPES, "");
+                }
+                negativo = true;
+            }
+            // salva copia do reg lexico antes de casar o prox token
+            RegLex rl_const;
+            memcpy(&rl_const, &registroLexico, sizeof(registroLexico));
             casaToken(TK_const);
-        }
+
+            // ERRO se nao for numero e possuir o token '-'
+            if ((rl_const.tipo != tipo_inteiro && rl_const.tipo != tipo_float) && negativo){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // ERRO se o id (simb_id) for float e a constante (rl_const) nao for um numero
+            if (simb_id.tipo == tipo_float){
+                if (rl_const.tipo != tipo_inteiro && rl_const.tipo != tipo_float){
+                    showError(INCOMPATIBLE_TYPES, "");
+                }
+            }
+            // se id n eh float, ERRO se os tipos forem diferentes
+            else if (simb_id.tipo != rl_const.tipo){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+        }// fim if
         
         while(registroLexico.token == TK_virgula){
             casaToken(TK_virgula);
+            lex_id = registroLexico.lexema;
             casaToken(TK_id);
 
+            simb_id = tab_simbolos[lex_id];
+
+            // checa se id ja foi declarado
+            if (simb_id.classe == classe_nula) {
+                // id ainda nao declarado
+                simb_id.classe = classe_variavel;
+                simb_id.tipo = tipo_id;
+                tab_simbolos[lex_id] = simb_id; // atualiza TS
+            } 
+            // id ja declarado
+            else showError(DUPLICATE_ID, lex_id);
+
+            negativo = false;
             if(registroLexico.token == TK_atrib){
                 casaToken(TK_atrib);
 
-                if (registroLexico.token == TK_menos) 
+                if (registroLexico.token == TK_menos){ 
                     casaToken(TK_menos);
+
+                    // ERRO se id nao for numerico
+                    if (simb_id.tipo != tipo_inteiro && simb_id.tipo != tipo_float){
+                        showError(INCOMPATIBLE_TYPES, "");
+                    }
+                    negativo = true;
+                }
+
+                // copia reglex
+                memcpy(&rl_const, &registroLexico, sizeof(registroLexico));
                 casaToken(TK_const);
+
+                // ERRO se nao for numero e possuir o token '-'
+                if ((rl_const.tipo != tipo_inteiro && rl_const.tipo != tipo_float) && negativo){
+                    showError(INCOMPATIBLE_TYPES, "");
+                }
+                // ERRO se o id (simb_id) for float e a constante (rl_const) nao for um numero
+                if (simb_id.tipo == tipo_float){
+                    if (rl_const.tipo != tipo_inteiro && rl_const.tipo != tipo_float){
+                        showError(INCOMPATIBLE_TYPES, "");
+                    }
+                }
+                // se id n eh float, ERRO se os tipos forem diferentes
+                else if (simb_id.tipo != rl_const.tipo){
+                    showError(INCOMPATIBLE_TYPES, "");
+                }
             }
-        }
+        }// fim while
 
     }
     
     // boolean id [:= (true | false)] {, id [:= (true | false)]}
     else {
         casaToken(TK_boolean);
+        string lex_id = registroLexico.lexema;
+        casaToken(TK_id);
+        // guarda simbolo da TS
+        Simbolo simb_id = tab_simbolos[lex_id];
+
+        // checa se id ja foi declarado
+        if (simb_id.classe == classe_nula){
+            // id ainda nao declarado
+            simb_id.classe = classe_variavel;
+            simb_id.tipo = tipo_boolean;
+            tab_simbolos[lex_id] = simb_id; // atualiza TS
+        }
+        // id ja declarado
+        else showError(DUPLICATE_ID, lex_id);
+
+////////////////////////////////////////////////////////////////////////////////////////// 
 
         if(registroLexico.token == TK_atrib){
             casaToken(TK_atrib);
@@ -846,6 +1032,7 @@ void Dec() {
   [ id [ "[" Exp "]" ] := Exp | readln "(" id ")" | (write | writeln) "(" Exp {, Exp} ")" ] ;
 */
 void Comandos(){
+    int tipo_Exp;
     // cout << "Comandos()" << "\n\n";
     // while e if
     if (registroLexico.token == TK_if || registroLexico.token == TK_while){
@@ -854,8 +1041,13 @@ void Comandos(){
         if (registroLexico.token == TK_if){
             casaToken(TK_if);
             casaToken(TK_abreParentese);
-            Exp();
+            Exp(&tipo_Exp);
             casaToken(TK_fechaParentese);
+
+            // ERRO se o tipo n for logico
+            if (tipo_Exp != tipo_boolean){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
             
             if(registroLexico.token == TK_abreChave){
                 casaToken(TK_abreChave);
@@ -894,9 +1086,14 @@ void Comandos(){
         else{
             casaToken(TK_while);
             casaToken(TK_abreParentese);
-            Exp();
+            Exp(&tipo_Exp);
             casaToken(TK_fechaParentese);
             
+            // ERRO se o tipo n for logico
+            if (tipo_Exp != tipo_boolean){
+                showError(INCOMPATIBLE_TYPES, "");
+            } 
+
             if(registroLexico.token == TK_abreChave){
                 casaToken(TK_abreChave);
                 // Enquanto token pertencer ao first de Comandos()
@@ -916,25 +1113,98 @@ void Comandos(){
 
     // producoes opcionais (seguidas de ;)
     else{
+        string lex_id;
+        Simbolo simb_id;
         // id [ "[" Exp "]" ] := Exp
         if(registroLexico.token == TK_id){
+            bool is_char_array = false;
+
+            lex_id = registroLexico.lexema; // guarda lexema do identificador
             casaToken(TK_id);
-            
+            simb_id = tab_simbolos[lex_id]; // pega o simbolo desse identificador na TS
+
+            // checa se id eh constante
+            if (simb_id.classe == classe_constante){
+                showError(INCOMPATIBLE_CLASSES, lex_id);
+            }
+            // checa se o identificador foi declarado previamente
+            else if (simb_id.classe == classe_nula){
+                showError(UNDECLARED_ID, lex_id);
+            }
+
             if(registroLexico.token == TK_abreColchete){
                 casaToken(TK_abreColchete);
-                Exp();
+
+                // ERRO se o id nao for string
+                if (simb_id.tipo != tipo_string){
+                    showError(INCOMPATIBLE_TYPES, "");
+                }
+
+                Exp(&tipo_Exp);
+
+                // ERRO se o indice nao for um numero inteiro
+                if (tipo_Exp != tipo_inteiro){
+                    showError(INCOMPATIBLE_TYPES, "");
+                }
+
+                is_char_array = true;
                 casaToken(TK_fechaColchete);
             }
 
             casaToken(TK_atrib);
-            Exp();
+            Exp(&tipo_Exp);
+
+            // checando os tipos de id (simb_id) e Exp (tipo_Exp)
+            // se id for string
+            if (simb_id.tipo == tipo_string){
+                // se id for do tipo indice de um char (id[numero]):
+                if (is_char_array){
+                    if (tipo_Exp != tipo_caractere){
+                        showError(INCOMPATIBLE_TYPES, "");
+                    }
+                }
+                // se id for uma string:
+                else{
+                    if (tipo_Exp != tipo_string){
+                        showError(INCOMPATIBLE_TYPES, "");
+                    }
+                }
+            }
+            // se id for char e Exp n for
+            else if (simb_id.tipo == tipo_caractere && tipo_Exp != tipo_caractere){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // se id for int e Exp nao for int:
+            else if (simb_id.tipo == tipo_inteiro && tipo_Exp != tipo_inteiro){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // se id for float e Exp n for numero:
+            else if (simb_id.tipo == tipo_float){
+                if (tipo_Exp != tipo_inteiro && tipo_Exp != tipo_float){
+                    showError(INCOMPATIBLE_TYPES, "");
+                }
+            }
+
         }// fim da producao de atribuicao
         
         // readln "(" id ")"
         else if(registroLexico.token == TK_readln){
             casaToken(TK_readln);
             casaToken(TK_abreParentese);
-            casaToken(TK_id);  
+            lex_id = registroLexico.lexema; // guarda lexema do identificador p/ a busca na TS
+            casaToken(TK_id);
+
+            simb_id = tab_simbolos[lex_id]; // busca na TS
+
+            // checa se foi declarado
+            if (simb_id.classe == classe_nula){
+                showError(UNDECLARED_ID, lex_id);
+            }
+            // checa se eh uma constante
+            else if (simb_id.classe == classe_constante){
+                showError(INCOMPATIBLE_CLASSES, lex_id);
+            }
+
             casaToken(TK_fechaParentese);  
         } // fim da producao de leitura
         
@@ -947,12 +1217,23 @@ void Comandos(){
                 casaToken(TK_writeln);
             }
             casaToken(TK_abreParentese);
-            Exp();
+            Exp(&tipo_Exp);
+
+            // o tipo nao pode ser logico
+            if (tipo_Exp == tipo_boolean){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
 
             while(registroLexico.token == TK_virgula){
                 casaToken(TK_virgula);
-                Exp();
+                Exp(&tipo_Exp);
+
+                // o tipo nao pode ser logico
+                if (tipo_Exp == tipo_boolean){
+                    showError(INCOMPATIBLE_TYPES, "");
+                }
             }// fim while
+
             casaToken(TK_fechaParentese);
             
         }// fim da producao de escrita
@@ -966,67 +1247,229 @@ void Comandos(){
 /* Procedimento Exp
   Exp -> ExpS [ (= | != | < | > | <= | >=) ExpS]
 */
-void Exp(){
+void Exp(int* tipo_Exp){
+    int tipo_ExpS, tipo_ExpS1;
     // cout << "Exp()" << "\n\n";
-    ExpS();
+    ExpS(&tipo_ExpS);
+
     switch(registroLexico.token){
         case TK_igualdade:
             casaToken(TK_igualdade);
-            ExpS();
+            ExpS(&tipo_ExpS1);
+
+            // verifica tipos dos termos a serem comparados
+            // char - char
+            if (tipo_ExpS == tipo_caractere && tipo_ExpS1 != tipo_caractere){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // string - string
+            else if (tipo_ExpS == tipo_string && tipo_ExpS1 != tipo_string){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // numero - numero
+            else if ((tipo_ExpS == tipo_inteiro || tipo_ExpS == tipo_float) && (tipo_ExpS1 != tipo_inteiro && tipo_ExpS1 != tipo_float)){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // nao houve erro, atribui tipo correto
+            else tipo_ExpS = tipo_boolean;
+
         break;
 
         case TK_diferente:
             casaToken(TK_diferente);
-            ExpS();
+            ExpS(&tipo_ExpS1);
+
+            // verifica tipos dos termos a serem comparados
+            // char - char
+            if (tipo_ExpS == tipo_caractere && tipo_ExpS1 != tipo_caractere){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // string - string
+            else if (tipo_ExpS == tipo_string && tipo_ExpS1 != tipo_string){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // numero - numero
+            else if ((tipo_ExpS == tipo_inteiro || tipo_ExpS == tipo_float) && (tipo_ExpS1 != tipo_inteiro && tipo_ExpS1 != tipo_float)){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // nao houve erro, atribui tipo correto
+            else tipo_ExpS = tipo_boolean;
         break;
 
         case TK_maior:
             casaToken(TK_maior);
-            ExpS();
+            ExpS(&tipo_ExpS1);
+
+            // verifica tipos dos termos a serem comparados
+            // char - char
+            if (tipo_ExpS == tipo_caractere && tipo_ExpS1 != tipo_caractere){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // string - string
+            else if (tipo_ExpS == tipo_string && tipo_ExpS1 != tipo_string){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // numero - numero
+            else if ((tipo_ExpS == tipo_inteiro || tipo_ExpS == tipo_float) && (tipo_ExpS1 != tipo_inteiro && tipo_ExpS1 != tipo_float)){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // nao houve erro, atribui tipo correto
+            else tipo_ExpS = tipo_boolean;
         break;
 
         case TK_menor:
             casaToken(TK_menor);
-            ExpS();
+            ExpS(&tipo_ExpS1);
+
+            // verifica tipos dos termos a serem comparados
+            // char - char
+            if (tipo_ExpS == tipo_caractere && tipo_ExpS1 != tipo_caractere){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // string - string
+            else if (tipo_ExpS == tipo_string && tipo_ExpS1 != tipo_string){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // numero - numero
+            else if ((tipo_ExpS == tipo_inteiro || tipo_ExpS == tipo_float) && (tipo_ExpS1 != tipo_inteiro && tipo_ExpS1 != tipo_float)){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // nao houve erro, atribui tipo correto
+            else tipo_ExpS = tipo_boolean;
         break;
 
         case TK_menorIgual:
             casaToken(TK_menorIgual);
-            ExpS();
+            ExpS(&tipo_ExpS1);
+
+            // verifica tipos dos termos a serem comparados
+            // char - char
+            if (tipo_ExpS == tipo_caractere && tipo_ExpS1 != tipo_caractere){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // string - string
+            else if (tipo_ExpS == tipo_string && tipo_ExpS1 != tipo_string){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // numero - numero
+            else if ((tipo_ExpS == tipo_inteiro || tipo_ExpS == tipo_float) && (tipo_ExpS1 != tipo_inteiro && tipo_ExpS1 != tipo_float)){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // nao houve erro, atribui tipo correto
+            else tipo_ExpS = tipo_boolean;
         break;
 
         case TK_maiorIgual:
             casaToken(TK_maiorIgual);
-            ExpS();
+            ExpS(&tipo_ExpS1);
+
+            // verifica tipos dos termos a serem comparados
+            // char - char
+            if (tipo_ExpS == tipo_caractere && tipo_ExpS1 != tipo_caractere){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // string - string
+            else if (tipo_ExpS == tipo_string && tipo_ExpS1 != tipo_string){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // numero - numero
+            else if ((tipo_ExpS == tipo_inteiro || tipo_ExpS == tipo_float) && (tipo_ExpS1 != tipo_inteiro && tipo_ExpS1 != tipo_float)){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // nao houve erro, atribui tipo correto
+            else tipo_ExpS = tipo_boolean;
         break;
     
     default:
         break;
 
     }// fim switch
+    tipo_Exp = &tipo_ExpS;
 }// fim Exp()
 
 
 /* Procedimento ExpS
   ExpS -> [-] T { (+ | - | "||") T}
 */
-void ExpS() {
+void ExpS(int* tipo_ExpS) {
+    int tipo_T, tipo_T1;
+    bool subtracao = false;
+    bool adicao = false;
     // cout << "ExpS()" << "\n\n";
-    if (registroLexico.token == TK_menos)
+    if (registroLexico.token == TK_menos){
+        subtracao = true;
         casaToken(TK_menos);
-    T();
-    while (registroLexico.token == TK_mais || registroLexico.token == TK_menos || registroLexico.token == TK_or) {
-        casaToken(registroLexico.token);
-        T();
     }
+    T(&tipo_T);
+
+    // se possui o token '-', deve ser um numero
+    if (subtracao && (tipo_T != tipo_inteiro && tipo_T != tipo_float)){
+        showError(INCOMPATIBLE_TYPES, "");
+    }
+
+    while (registroLexico.token == TK_mais || registroLexico.token == TK_menos || registroLexico.token == TK_or) {
+        subtracao = adicao = false;
+
+        switch (registroLexico.token){
+            case TK_mais:
+                casaToken(registroLexico.token);
+                // o termo deve ser um numero
+                if (tipo_T != tipo_inteiro && tipo_T != tipo_float){
+                    showError(INCOMPATIBLE_TYPES, "");
+                }
+                adicao = true;
+                break;
+
+            case TK_menos:
+                casaToken(registroLexico.token);
+                // o termo deve ser um numero
+                if (tipo_T != tipo_inteiro && tipo_T != tipo_float){
+                    showError(INCOMPATIBLE_TYPES, "");
+                }
+                subtracao = true;
+                break;
+
+            case TK_or:
+                casaToken(registroLexico.token);
+                // o termo deve ser logico
+                if (tipo_T != tipo_boolean){
+                    showError(INCOMPATIBLE_TYPES, "");
+                }
+                break;
+        }// fim switch
+        
+        T(&tipo_T1);
+
+        // checa tipos para +, -, ||
+        if (adicao || subtracao){
+            if (tipo_T1 != tipo_inteiro && tipo_T1 != tipo_float){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            else if (tipo_T == tipo_inteiro && tipo_T1 == tipo_inteiro){
+                tipo_T = tipo_inteiro;
+            }
+            else{
+                tipo_T = tipo_float;
+            }
+        }
+        // ERRO se um termo for logico e o outro nao
+        else if (tipo_T == tipo_boolean && tipo_T1 != tipo_boolean){
+            showError(INCOMPATIBLE_TYPES, "");
+        }
+    }// fim while
+
+    tipo_ExpS = &tipo_T;
 }
 
 /* Procedimento T
   T -> F { (* | && | / | div | mod) F}
 */
-void T() {
+void T(int* tipo_T) {
+    int tipo_F, tipo_F1;
+    bool multiplicacao = false;
+    bool divisao = false;
     // cout << "T()" << "\n\n";
-    F();
+    F(&tipo_F);
     while (
         registroLexico.token == TK_asterisco || 
         registroLexico.token == TK_and       || 
@@ -1034,15 +1477,101 @@ void T() {
         registroLexico.token == TK_div       || 
         registroLexico.token == TK_mod
     ) {
-        casaToken(registroLexico.token);
-        F();
-    }
+        multiplicacao = divisao = false;
+
+        switch(registroLexico.token){
+            case TK_asterisco:
+                casaToken(registroLexico.token);
+
+                // ERRO se fator nao for numero
+                if (tipo_F != tipo_inteiro && tipo_F != tipo_float){
+                    showError(INCOMPATIBLE_TYPES, "");
+                }
+
+                multiplicacao = true;
+                break;
+
+            case TK_and:
+                casaToken(registroLexico.token);
+
+                // ERRO se fator nao for logico
+                if (tipo_F != tipo_boolean){
+                    showError(INCOMPATIBLE_TYPES, "");
+                }
+
+                break;
+
+            case TK_barra:
+                casaToken(registroLexico.token);
+
+                // ERRO se fator nao for numero
+                if (tipo_F != tipo_inteiro && tipo_F != tipo_float){
+                    showError(INCOMPATIBLE_TYPES, "");
+                }
+
+                divisao = true;
+                break;
+
+            case TK_div:
+                casaToken(registroLexico.token);
+
+                // ERRO se fator nao for um numero inteiro
+                if (tipo_F != tipo_inteiro){
+                    showError(INCOMPATIBLE_TYPES, "");
+                }
+
+                break;
+
+            case TK_mod:
+                casaToken(registroLexico.token);
+                
+                // ERRO se fator nao for um numero inteiro
+                if (tipo_F != tipo_inteiro){
+                    showError(INCOMPATIBLE_TYPES, "");
+                }
+
+                break;
+        }// fim switch
+        
+        F(&tipo_F1);
+
+        // checa *, /, &&, div, mod
+        if (multiplicacao || divisao){
+            // ERRO se n for um numero
+            if (tipo_F1 != tipo_inteiro && tipo_F1 != tipo_float){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // se for divisao o resultado sera um numero real
+            if (divisao){
+                tipo_F = tipo_float;
+            }
+            // multiplicacao
+            else if (tipo_F == tipo_inteiro && tipo_F1 == tipo_inteiro){
+                // ambos fatores inteiros, resultado inteiro
+                tipo_F = tipo_inteiro;
+            }
+            else{
+                // se pelo menos um fator for real, resultado sera real
+                tipo_F = tipo_float;
+            }
+        }
+        // && exige que os 2 fatores sejam logicos
+        else if (tipo_F == tipo_boolean && tipo_F1 != tipo_boolean){
+            showError(INCOMPATIBLE_TYPES, "");
+        }
+        // div e mod exigem que os 2 fatores sejam inteiros
+        else if (tipo_F == tipo_inteiro && tipo_F1 != tipo_inteiro){
+            showError(INCOMPATIBLE_TYPES, "");
+        }
+    }// fim while
+
+    tipo_T = &tipo_F;
 }// fim T()
 
 /* Procedimento F
   F -> ! F | (int | float) "(" Exp ")" | "(" Exp ")" | id [ "[" Exp "]" ] | constante
 */
-void F() {
+void F(int* tipo_F) {
     // cout << "F()" << "\n\n";
     if (registroLexico.token == TK_not) {
         casaToken(TK_not);
