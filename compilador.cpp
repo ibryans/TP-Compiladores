@@ -242,7 +242,7 @@ void showError(int type, string lex) {
             cout << "token nao esperado [" << lex << "]." << endl;
             break;
         case INVALID_STR_SIZE:
-            cout << "str maior que o permitido (" << lex.length() << " bytes)" << endl;
+            cout << "str maior que o permitido (" << lex.length() << " bytes)." << endl;
             break;
         case DUPLICATE_ID:
             cout << "identificador ja declarado [" << lex << "]." << endl;
@@ -759,10 +759,10 @@ string getNextToken() {
 void S();
 void Dec();
 void Comandos();
-void Exp();
-void ExpS();
-void T();
-void F();
+void Exp(int*);
+void ExpS(int*);
+void T(int*);
+void F(int*);
 
 /** Procedimento casaToken: Verifica se o token recebido é igual ao esperado na linguagem **/
 void casaToken(int token) {
@@ -1405,7 +1405,7 @@ void Exp(int* tipo_Exp){
         break;
 
     }// fim switch
-    tipo_Exp = &tipo_ExpS;
+    *tipo_Exp = tipo_ExpS;
 }// fim Exp()
 
 
@@ -1479,7 +1479,7 @@ void ExpS(int* tipo_ExpS) {
         }
     }// fim while
 
-    tipo_ExpS = &tipo_T;
+    *tipo_ExpS = tipo_T;
 }
 
 /* Procedimento T
@@ -1587,7 +1587,7 @@ void T(int* tipo_T) {
         }
     }// fim while
 
-    tipo_T = &tipo_F;
+    *tipo_T = tipo_F;
 }// fim T()
 
 /* Procedimento F
