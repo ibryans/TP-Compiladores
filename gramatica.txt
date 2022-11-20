@@ -2,7 +2,7 @@ Gramática:
 
    S	 -> { Dec | Comandos } EOF
 
-  Dec	 -> ( const id (29) = [- (40)] constante (30) |
+  Dec	 -> ( const id (29) = [- (40)] (constante | true | false) (30) |
             (int (31) | float (32) | char (33) | string (34) ) id (35) [:= [- (36)] constante (37) ] {, id (35) [:= [- (36) ] constante (37) ]} | 
 	        boolean id (38) [:= (true | false)] {, id (38) [:= (true | false)]} );
 
@@ -12,7 +12,7 @@ Comandos -> ( if "("Exp")" (24) ( Comandos | "{" {Comandos} "}" ) [ else ( Coman
             readln "(" id (25) ")" |
             (write | writeln) "(" Exp (28) {, Exp (28) } ")" ];
 
-  Exp    -> ExpS [ (= (21) | != | < | > | <= | >=) ExpS1 (22) ] (23)
+  Exp    -> ExpS [ (= | != | < | > | <= | >=) ExpS1 (22) ] (23)
 
  ExpS    -> [- (39)] T (15) { (+ (16) | - (17) | "||" (18) ) T1 (19) } (20)
 
@@ -79,12 +79,11 @@ Comandos -> ( if "("Exp")" (24) ( Comandos | "{" {Comandos} "}" ) [ else ( Coman
       senão se T.tipo = logico && T1.tipo != logico
         ERRO}
 (20) {ExpS.tipo := T.tipo}
-(21) {Exp.flag_igualdade := verdadeiro}
 (22) {se ExpS.tipo = caractere && ExpS1.tipo != caractere
         ERRO
-      senão se ExpS.tipo = string && (Exp.flag_igualdade := falso || ExpS1.tipo != string)
+      senão se ExpS.tipo = string && ExpS1.tipo != string
         ERRO 
-      senão se Exp.flag_igualdade := falso && ExpS1.tipo := string
+      senão se (ExpS.tipo == inteiro || ExpS.tipo == real) && (ExpS.tipo1 != inteiro && ExpS1.tipo != real)
         ERRO
       senão se (ExpS1.tipo != inteiro && ExpS1.tipo != real) && (Exp.tipo = inteiro || Exp.tipo = real)
         ERRO
