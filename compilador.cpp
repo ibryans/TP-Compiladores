@@ -770,10 +770,10 @@ string getNextToken() {
 void S();
 void Dec();
 void Comandos();
-void Exp(int*);
-void ExpS(int*);
-void T(int*);
-void F(int*);
+void Exp(int*, int*, int*);
+void ExpS(int*, int*, int*);
+void T(int*, int*, int*);
+void F(int*, int*, int*);
 
 /** Procedimento casaToken: Verifica se o token recebido é igual ao esperado na linguagem **/
 void casaToken(int token) {
@@ -1063,7 +1063,8 @@ void Dec() {
   [ id [ "[" Exp "]" ] := Exp | readln "(" id ")" | (write | writeln) "(" Exp {, Exp} ")" ] ;
 */
 void Comandos(){
-    int tipo_Exp;
+    int tipo_Exp, tamanho_Exp, end_Exp;
+
     // while e if
     if (registroLexico.token == TK_if || registroLexico.token == TK_while){
 
@@ -1071,7 +1072,7 @@ void Comandos(){
         if (registroLexico.token == TK_if){
             casaToken(TK_if);
             casaToken(TK_abreParentese);
-            Exp(&tipo_Exp);
+            Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
             casaToken(TK_fechaParentese);
 
             // ERRO se o tipo n for logico
@@ -1116,7 +1117,7 @@ void Comandos(){
         else{
             casaToken(TK_while);
             casaToken(TK_abreParentese);
-            Exp(&tipo_Exp);
+            Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
             casaToken(TK_fechaParentese);
             
             // ERRO se o tipo n for logico
@@ -1170,7 +1171,7 @@ void Comandos(){
                     showError(INCOMPATIBLE_TYPES, "");
                 }
 
-                Exp(&tipo_Exp);
+                Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
 
                 // ERRO se o indice nao for um numero inteiro
                 if (tipo_Exp != tipo_inteiro){
@@ -1182,7 +1183,7 @@ void Comandos(){
             }
 
             casaToken(TK_atrib);
-            Exp(&tipo_Exp);
+            Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
 
             // checando os tipos de id (simb_id) e Exp (tipo_Exp)
             // se id for string
@@ -1246,7 +1247,7 @@ void Comandos(){
                 casaToken(TK_writeln);
             }
             casaToken(TK_abreParentese);
-            Exp(&tipo_Exp);
+            Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
 
             // o tipo nao pode ser logico
             if (tipo_Exp == tipo_boolean){
@@ -1255,7 +1256,7 @@ void Comandos(){
 
             while(registroLexico.token == TK_virgula){
                 casaToken(TK_virgula);
-                Exp(&tipo_Exp);
+                Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
 
                 // o tipo nao pode ser logico
                 if (tipo_Exp == tipo_boolean){
@@ -1276,14 +1277,16 @@ void Comandos(){
 /* Procedimento Exp
   Exp -> ExpS [ (= | != | < | > | <= | >=) ExpS]
 */
-void Exp(int* tipo_Exp){
-    int tipo_ExpS, tipo_ExpS1;
-    ExpS(&tipo_ExpS);
+void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
+    int tipo_ExpS, tamanho_ExpS, end_ExpS;
+    int tipo_ExpS1, tamanho_ExpS1, end_ExpS1;
+
+    ExpS(&tipo_ExpS, &tamanho_ExpS, &end_ExpS);
 
     switch(registroLexico.token){
         case TK_igualdade:
             casaToken(TK_igualdade);
-            ExpS(&tipo_ExpS1);
+            ExpS(&tipo_ExpS1, &tamanho_ExpS1, &end_ExpS1);
 
             // verifica tipos dos termos a serem comparados
             // char - char
@@ -1305,7 +1308,7 @@ void Exp(int* tipo_Exp){
 
         case TK_diferente:
             casaToken(TK_diferente);
-            ExpS(&tipo_ExpS1);
+            ExpS(&tipo_ExpS1, &tamanho_ExpS1, &end_ExpS1);
 
             // verifica tipos dos termos a serem comparados
             // char - char
@@ -1326,7 +1329,7 @@ void Exp(int* tipo_Exp){
 
         case TK_maior:
             casaToken(TK_maior);
-            ExpS(&tipo_ExpS1);
+            ExpS(&tipo_ExpS1, &tamanho_ExpS1, &end_ExpS1);
 
             // verifica tipos dos termos a serem comparados
             // char - char
@@ -1347,7 +1350,7 @@ void Exp(int* tipo_Exp){
 
         case TK_menor:
             casaToken(TK_menor);
-            ExpS(&tipo_ExpS1);
+            ExpS(&tipo_ExpS1, &tamanho_ExpS1, &end_ExpS1);
 
             // verifica tipos dos termos a serem comparados
             // char - char
@@ -1368,7 +1371,7 @@ void Exp(int* tipo_Exp){
 
         case TK_menorIgual:
             casaToken(TK_menorIgual);
-            ExpS(&tipo_ExpS1);
+            ExpS(&tipo_ExpS1, &tamanho_ExpS1, &end_ExpS1);
 
             // verifica tipos dos termos a serem comparados
             // char - char
@@ -1389,7 +1392,7 @@ void Exp(int* tipo_Exp){
 
         case TK_maiorIgual:
             casaToken(TK_maiorIgual);
-            ExpS(&tipo_ExpS1);
+            ExpS(&tipo_ExpS1, &tamanho_ExpS1, &end_ExpS1);
 
             // verifica tipos dos termos a serem comparados
             // char - char
@@ -1416,85 +1419,86 @@ void Exp(int* tipo_Exp){
 }// fim Exp()
 
 
-/* Procedimento ExpS
-  ExpS -> [-] T { (+ | - | "||") T}
-*/
-void ExpS(int* tipo_ExpS) {
-    int tipo_T, tipo_T1;
-    bool subtracao = false;
+/* Procedimento ExpS	
+  ExpS -> [-] T { (+ | - | "||") T}	
+*/	
+void ExpS(int* tipo_ExpS, int* tamanho_S, int* end_S) {	
+    int tipo_T, tamanho_T, end_T;	
+    int tipo_T1, tamanho_T1, end_T1;
+
+    bool subtracao = false;	
     bool adicao = false;
-    if (registroLexico.token == TK_menos){
-        subtracao = true;
-        casaToken(TK_menos);
-    }
-    T(&tipo_T);
 
-    // se possui o token '-', deve ser um numero
-    if (subtracao && (tipo_T != tipo_inteiro && tipo_T != tipo_float)){
-        showError(INCOMPATIBLE_TYPES, "");
-    }
-
-    while (registroLexico.token == TK_mais || registroLexico.token == TK_menos || registroLexico.token == TK_or) {
-        subtracao = adicao = false;
-
-        switch (registroLexico.token){
-            case TK_mais:
-                casaToken(registroLexico.token);
-                // o termo deve ser um numero
-                if (tipo_T != tipo_inteiro && tipo_T != tipo_float){
-                    showError(INCOMPATIBLE_TYPES, "");
-                }
-                adicao = true;
-                break;
-
-            case TK_menos:
-                casaToken(registroLexico.token);
-                // o termo deve ser um numero
-                if (tipo_T != tipo_inteiro && tipo_T != tipo_float){
-                    showError(INCOMPATIBLE_TYPES, "");
-                }
-                subtracao = true;
-                break;
-
-            case TK_or:
-                casaToken(registroLexico.token);
-                // o termo deve ser logico
-                if (tipo_T != tipo_boolean){
-                    showError(INCOMPATIBLE_TYPES, "");
-                }
-                break;
-        }// fim switch
-        T(&tipo_T1);
-
-        // checa tipos para +, -, ||
-        if (adicao || subtracao){
-            if (tipo_T1 != tipo_inteiro && tipo_T1 != tipo_float){
-                showError(INCOMPATIBLE_TYPES, "");
-            }
-            else if (tipo_T == tipo_inteiro && tipo_T1 == tipo_inteiro){
-                tipo_T = tipo_inteiro;
-            }
-            else{
-                tipo_T = tipo_float;
-            }
-        }
-        // ERRO se um termo for logico e o outro nao
-        else if (tipo_T == tipo_boolean && tipo_T1 != tipo_boolean){
-            showError(INCOMPATIBLE_TYPES, "");
-        }
-    }// fim while
-
-    *tipo_ExpS = tipo_T;
+    if (registroLexico.token == TK_menos){	
+        subtracao = true;	
+        casaToken(TK_menos);	
+    }	
+    T(&tipo_T, &tamanho_T, &end_T);	
+    // se possui o token '-', deve ser um numero	
+    if (subtracao && (tipo_T != tipo_inteiro && tipo_T != tipo_float)){	
+        showError(INCOMPATIBLE_TYPES, "");	
+    }	
+    while (registroLexico.token == TK_mais || registroLexico.token == TK_menos || registroLexico.token == TK_or) {	
+        subtracao = adicao = false;	
+        switch (registroLexico.token){	
+            case TK_mais:	
+                casaToken(registroLexico.token);	
+                // o termo deve ser um numero	
+                if (tipo_T != tipo_inteiro && tipo_T != tipo_float){	
+                    showError(INCOMPATIBLE_TYPES, "");	
+                }	
+                adicao = true;	
+                break;	
+            case TK_menos:	
+                casaToken(registroLexico.token);	
+                // o termo deve ser um numero	
+                if (tipo_T != tipo_inteiro && tipo_T != tipo_float){	
+                    showError(INCOMPATIBLE_TYPES, "");	
+                }	
+                subtracao = true;	
+                break;	
+            case TK_or:	
+                casaToken(registroLexico.token);	
+                // o termo deve ser logico	
+                if (tipo_T != tipo_boolean){	
+                    showError(INCOMPATIBLE_TYPES, "");	
+                }	
+                break;	
+        }// fim switch	
+        	
+        T(&tipo_T1, &tamanho_T1, &end_T1);	
+        // checa tipos para +, -, ||	
+        if (adicao || subtracao){	
+            if (tipo_T1 != tipo_inteiro && tipo_T1 != tipo_float){	
+                showError(INCOMPATIBLE_TYPES, "");	
+            }	
+            else if (tipo_T == tipo_inteiro && tipo_T1 == tipo_inteiro){	
+                tipo_T = tipo_inteiro;	
+            }	
+            else{	
+                tipo_T = tipo_float;	
+            }	
+        }	
+        // ERRO se um termo for logico e o outro nao	
+        else if (tipo_T == tipo_boolean && tipo_T1 != tipo_boolean){	
+            showError(INCOMPATIBLE_TYPES, "");	
+        }	
+    }// fim while	
+    *tipo_ExpS = tipo_T;	
 }
 
 /* Procedimento T
   T -> F { (* | && | / | div | mod) F}
 */
-void T(int* tipo_T) {
-    int tipo_F, tipo_F1;
+void T(int* tipo_T, int* tamanho_T, int* end_T) {
+    int tipo_F, tamanho_F, end_F;
+    int tipo_F1, tamanho_F1, end_F1;
+
     bool multiplicacao = false;
     bool divisao = false;
-    F(&tipo_F);
+    
+    F(&tipo_F, &tamanho_F, &end_F);
+    
     while (
         registroLexico.token == TK_asterisco || 
         registroLexico.token == TK_and       || 
@@ -1559,7 +1563,7 @@ void T(int* tipo_T) {
                 break;
         }// fim switch
         
-        F(&tipo_F1);
+        F(&tipo_F1, &tamanho_F1, &end_F1);
 
         // checa *, /, &&, div, mod
         if (divisao || multiplicacao){
@@ -1597,13 +1601,42 @@ void T(int* tipo_T) {
 /* Procedimento F
   F -> constante | (int | float) "(" Exp ")" | "(" Exp ")" | id [ "[" Exp "]" ] | ! F
 */
-void F(int* tipo_F) {
-    int tipo_EXP;
+void F(int* tipo_F, int* tamanho_F, int* end_F) {
+    int tipo_Exp, tamanho_Exp, end_Exp;
 
     // constante
     if (registroLexico.token == TK_const) {
         *tipo_F = registroLexico.tipo;
         casaToken(TK_const);
+
+        /* GERAÇÃO DE CÓDIGO */	
+        // Reserva memoria para a constante declarada	
+        // int end_aux;	
+        // if (*tipo_F == tipo_inteiro) {	
+        //     end_aux = NovoTemp(4); // recupera endereco e aloca proxima area disponivel	
+        //     codigoAssembly.append("\tmov eax," + registroLexico.lexema + "\t\t; movendo valor inteiro\n");	
+        //     codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_aux) + "], eax \t\t; atribuindo valor no endereco temp reservado\n");	
+        // } else if (*tipo_F == tipo_caractere) {	
+        //     end_aux = NovoTemp(1); // recupera endereco e aloca proxima area disponivel	
+        //     codigoAssembly.append("\tmov al," + registroLexico.lexema + "\t\t; movendo valor caractere\n");	
+        //     codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_aux) + "], al \t\t; atribuindo valor no endereco temp reservado\n");	
+        // } else if (*tipo_F == tipo_float) {	
+        //     codigoAssembly.append("\nsection .data \t\t; Abrindo sessão de dados\n");	
+        //     // adiciona 0 se o numero comecar com .	
+        //     if (registroLexico.lexema[0] == '.') registroLexico.lexema = '0' + registroLexico.lexema;	
+        //     codigoAssembly.append("\tdd " + registroLexico.lexema + " \t\t; Alocando 4 bytes e atribuindo valor\n");	
+        //     codigoAssembly.append("section .text \t\t; Reabrindo sessão do código\n");	
+        //     end_aux = NovoDado(4); // salva endereco disponivel e atualiza proximo endereco disponivel	
+        // } else {	
+        //     codigoAssembly.append("\nsection .data \t\t; Abrindo sessão de dados\n");	
+        //     codigoAssembly.append("\tdb " + registroLexico.lexema + ",0 \t\t; Alocando o tamanho da string+1 em bytes e atribuindo valor\n");	
+        //     codigoAssembly.append("\nsection .text \t\t; Reabrindo sessão do código\n");	
+        //     // tamanho da string + o 0h do fim de string	
+        //     end_aux = NovoDado(registroLexico.tamanho+1); // salva endereco disponivel e atualiza proximo endereco disponivel	
+        //     *tamanho_F = registroLexico.tamanho; // tamanho da string.	
+        // }// fim if else	
+        // *end_F = end_aux; // atribui endereco recebido.
+
     }
 
     // (int | float) "(" Exp ")"
@@ -1618,19 +1651,46 @@ void F(int* tipo_F) {
         }
         casaToken(TK_abreParentese);
         
-        Exp(&tipo_EXP);
-        if (tipo_EXP != tipo_inteiro && tipo_EXP != tipo_float)
+        Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
+        if (tipo_Exp != tipo_inteiro && tipo_Exp != tipo_float)
             showError(INCOMPATIBLE_TYPES, "");
 
         casaToken(TK_fechaParentese);
+
+        /* GERAÇÃO DE CÓDIGO */
+        // Realiza conversao do valor de EXP para inteiro ou float em um endereco temporario e atualiza endereco de F
+        // int end_aux = NovoTemp(4); // recupera endereco de memoria e aloca a proxima disponivel na area de temps
+        // if (*tipo_F == tipo_inteiro) { // conversao para inteiro
+        //     if (tipo_Exp == tipo_inteiro) { // EXP inteira
+        //         codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_Exp) + "] \t\t; Recupera o valor de EXP\n");
+        //         codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_aux) + "],eax \t\t; Atribui o valor do reg ao temp\n");
+        //     } else { // EXP real. Precisa de conversao
+        //         codigoAssembly.append("\tmovss xmm0,[qword M+" + EnderecoHex(end_Exp) + "] \t\t; Recupera o valor de EXP\n");
+        //         codigoAssembly.append("\troundss xmm1, xmm0, 0b0011 \t\t;parte inteira em xmm1\n");
+        //         codigoAssembly.append("\tcvtss2si eax, xmm1 \t\t;convertido para int\n");
+        //         codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_aux) + "],eax \t\t; Atribui o valor do reg ao temp\n");
+        //     }// fim if else
+        // } else { // conversao para real
+        //     if (tipo_Exp == tipo_inteiro) { // EXP inteira. Precisa de conversao
+        //         codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_Exp) + "]\t\t; Carrega conteudo do endereco de EXP\n");
+        //         codigoAssembly.append("\tcvtsi2ss xmm0,eax \t\t; converte para real e armazena valor\n");
+        //         codigoAssembly.append("\tmovss [qword M+" + EnderecoHex(end_aux) + "],xmm0 \t\t; Atribui o valor do reg ao temp\n");
+        //     } else { // EXP real
+        //         codigoAssembly.append("\tmovss xmm0,[qword M+" + EnderecoHex(end_Exp) + "] \t\t; Recupera o valor de EXP\n");
+        //         codigoAssembly.append("\tmovss [qword M+" + EnderecoHex(end_aux) + "],xmm0 \t\t; Atribui o valor do reg ao temp\n");
+        //     }// fim if else
+        // }// fim if else
+
+        // *end_F = end_aux; // atribui endereco temporario ao endereco de F
+
     }
 
     // "(" Exp ")"
     else if (registroLexico.token == TK_abreParentese) {
         casaToken(TK_abreParentese);
         
-        Exp(&tipo_EXP);
-        *tipo_F = tipo_EXP;
+        Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
+        *tipo_F = tipo_Exp;
 
         casaToken(TK_fechaParentese);
     }
@@ -1650,8 +1710,10 @@ void F(int* tipo_F) {
         if (simb_id.classe == classe_nula) {
             showError(UNDECLARED_ID, lex_id);
         } else {
-            // Se foi declarado, pega o tipo dele
+            // Se foi declarado, pega as infos dele
             *tipo_F = simb_id.tipo;
+            // *tamanho_F = simb_id.tamanho;
+            // *end_F = simb_id.endereco;
         }
 
         if (registroLexico.token == TK_abreColchete) {
@@ -1661,13 +1723,26 @@ void F(int* tipo_F) {
             if (simb_id.tipo != tipo_string)
                 showError(INCOMPATIBLE_TYPES, "");
 
-            Exp(&tipo_EXP);
+            Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
 
             // Posição da string tem que ser um numero inteiro
-            if (tipo_EXP != tipo_inteiro)
+            if (tipo_Exp != tipo_inteiro)
                 showError(INCOMPATIBLE_TYPES, "");
             else
                 *tipo_F = tipo_caractere;
+
+            /* GERAÇÃO DE CÓDIGO */
+            // Aloca novo temporario com o valor do caractere na string desejada
+            // int end_aux = NovoTemp(1); // recupera endereco de memoria e aloca a proxima disponivel na area de temps
+            // codigoAssembly.append("\tmov rsi,qword M+" + EnderecoHex(*end_F) + "\t\t; Pega posicao inicial da string\n");
+            // codigoAssembly.append("\tmov rax,0 \t\t; Limpa registrador\n");
+            // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_Exp) + "] \t\t; Recupera valor do indice\n");
+            // codigoAssembly.append("\tadd rsi,rax \t\t; Atualiza endereco para a posição desejada\n");
+            // codigoAssembly.append("\tmov bl,[rsi] \t\t; Recupera valor do caractere apontado\n");
+            // codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_aux) + "],bl \t\t; Guarda caractere no novo endereco\n");
+
+            // *tamanho_F = 1; // atribui tamanho do caractere ao tamanho do F
+            // *end_F = end_aux; // atribui endereco do novo temporario ao endereco do F
 
             casaToken(TK_fechaColchete);
         }
@@ -1675,16 +1750,24 @@ void F(int* tipo_F) {
 
     // ! F1
     else if (registroLexico.token == TK_not) {
-        int tipo_F1;
+        int tipo_F1, tamanho_F1, end_F1;
         casaToken(TK_not);
         
-        F(&tipo_F1);
+        F(&tipo_F1, &tamanho_F1, &end_F1);
 
         // O tipo de F1 tem que ser lógico
-        if (tipo_F1 != tipo_boolean)
-            showError(INCOMPATIBLE_TYPES, "");
-        else
-            *tipo_F = tipo_F1;
+        if (tipo_F1 != tipo_boolean) showError(INCOMPATIBLE_TYPES, "");
+        else *tipo_F = tipo_F1;
+
+        /* GERAÇÃO DE CÓDIGO */
+        // Aloca novo temporario com o valor do booleano (inteiro) negado
+        // int end_aux = NovoTemp(4); // recupera endereco de memoria e aloca a proxima disponivel na area de temps
+        // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_F1) + "] \t\t; Recupera valor do inteiro (booleano)\n");
+        // codigoAssembly.append("\tneg eax \t\t; Nega valor inteiro do registrador\n");
+        // codigoAssembly.append("\tadd eax,1 \t\t; Realiza o complemento de 2\n");
+        // codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_aux) + "],eax \t\t; Guarda novo booleano negado no novo endereco\n");
+        // *tamanho_F = 0; // zera variavel de tamanho por nao ser necessaria
+        // *end_F = end_aux; // atribui endereco do novo temporario ao endereco do F
     } 
 }// fim F()
 
