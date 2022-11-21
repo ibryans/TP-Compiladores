@@ -178,7 +178,7 @@ class Tabela_simbolos {
 
 };
 
-/** Estrutura para armazenar o registro léxico */
+/** Estrutura para carrega o registro léxico */
 struct RegLex{
     string lexema;
     int token;
@@ -1278,11 +1278,12 @@ void Comandos(){
   Exp -> ExpS [ (= | != | < | > | <= | >=) ExpS]
 */
 void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
-    int tipo_ExpS, tamanho_ExpS, end_ExpS;
+    int tipo_ExpS, tamanho_ExpS, end_ExpS, tipo_ExpS_aux;
     int tipo_ExpS1, tamanho_ExpS1, end_ExpS1;
 
     ExpS(&tipo_ExpS, &tamanho_ExpS, &end_ExpS);
 
+    tipo_ExpS_aux = tipo_ExpS;
     switch(registroLexico.token){
         case TK_igualdade:
             casaToken(TK_igualdade);
@@ -1303,6 +1304,107 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             }
             // nao houve erro, atribui tipo correto
             else tipo_ExpS = tipo_boolean;
+
+
+            /* GERAÇÃO DE CÓDIGO (=) */
+            // ambos operandos sao inteiros
+            if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
+                codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                codigoAssembly.append("\tmov ebx,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
+                codigoAssembly.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tje " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; guarda resultado\n");
+            }
+            // pelo menos um operando eh float
+            if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
+                // ExpS eh inteiro
+                if(tipo_ExpS_aux == tipo_inteiro){
+                    codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                    codigoAssembly.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ real\n");
+                }
+                // ExpS eh real
+                else {
+                    codigoAssembly.append("\tmovss xmm0,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
+                }
+                
+                // ExpS1 eh inteiro
+                if(tipo_ExpS1 == tipo_inteiro){
+                    codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
+                    codigoAssembly.append("\tcvtsi2ss xmm1,eax \t\t; converte p/ real\n");
+                }
+                // ExpS1 eh real
+                else {
+                    codigoAssembly.append("\tmovss xmm1,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
+                }
+
+                // faz (=)
+                codigoAssembly.append("\tcomiss xmm0,xmm1\t\t; faz comparacao (ExpS e ExpS1)\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tje " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; carrega ExpS.end\n");
+            }
+
+            // ambos operandos sao sgtring
+            if(tipo_ExpS_aux == tipo_string && tipo_ExpS1 == tipo_string){
+
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=0\n");
+                codigoAssembly.append("\tmov ebx,0 \t\t; ebx:=0\n");
+                codigoAssembly.append("\tmov rsi,qword M+" + EnderecoHex(end_ExpS) + "\t\t; guarda ExpS.end em rsi\n");
+                codigoAssembly.append("\tmov rdi,qword M+" + EnderecoHex(end_ExpS1) + "\t\t; guarda ExpS1.end em rdi\n");
+                string next_char = NovoRot();
+                codigoAssembly.append(next_char + ": \t\t; rotulo p/ ler proximo char da str\n");
+                codigoAssembly.append("\tmov al,[rsi] \t\t; guarda o char atual de ExpS\n");
+                codigoAssembly.append("\tmov bl,[rdi] \t\t; guarda o char atual de ExpS1\n");
+                codigoAssembly.append("\tadd rsi,1 \t\t; aponta p/ o char seguinte (anda 1 byte p/ frente)\n");
+                codigoAssembly.append("\tadd rdi,1 \t\t; aponta p/ o char seguinte (anda 1 byte p/ frente)\n");
+                codigoAssembly.append("\tcmp al,bl \t\t; compara chars\n");
+                string rot_falso = NovoRot();
+                codigoAssembly.append("\tjne " + rot_falso + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tcmp eax,0\t\t; checa se eh o fim da string\n");
+                codigoAssembly.append("\tjne " + next_char + "\t\t; se não eh o fim, continua o loop (jump p/ next_char)\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_falso + ": \t\t; rot_falso\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; carrega true ou false em [ExpS.end]\n");
+            }
+
+            // ambos operandos sao caracteres
+            if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=0\n");
+                codigoAssembly.append("\tmov ebx,0 \t\t; ebx:=0\n");
+                codigoAssembly.append("\tmov al,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
+                codigoAssembly.append("\tmov bl,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
+                codigoAssembly.append("\tcmp eax,ebx\t\t; comparar resultado\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tje " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; carrega ExpS.end\n");
+            }
 
         break;
 
@@ -1325,6 +1427,78 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             }
             // nao houve erro, atribui tipo correto
             else tipo_ExpS = tipo_boolean;
+
+            /* GERAÇÃO DE CÓDIGO (!=) */
+            // ambos operandos sao inteiros
+            if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
+                codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                codigoAssembly.append("\tmov ebx,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
+                codigoAssembly.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tjne " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; guarda resultado\n");
+            }
+            // pelo menos um operando eh float
+            if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
+                // ExpS eh inteiro
+                if(tipo_ExpS_aux == tipo_inteiro){
+                    codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                    codigoAssembly.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ real\n");
+                }
+                // ExpS eh real
+                else {
+                    codigoAssembly.append("\tmovss xmm0,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
+                }
+
+                // ExpS1 eh inteiro
+                if(tipo_ExpS1 == tipo_inteiro){
+                    codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
+                    codigoAssembly.append("\tcvtsi2ss xmm1,eax \t\t; converte p/ real\n");
+                }
+                // ExpS1 eh real
+                else {
+                    codigoAssembly.append("\tmovss xmm1,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
+                }
+
+                // faz (!=)
+                codigoAssembly.append("\tcomiss xmm0,xmm1\t\t; faz comparacao (ExpS e ExpS1)\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tjne " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; carrega ExpS.end\n");
+            }
+
+            if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=0\n");
+                codigoAssembly.append("\tmov ebx,0 \t\t; ebx:=0\n");
+                codigoAssembly.append("\tmov al,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
+                codigoAssembly.append("\tmov bl,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
+                codigoAssembly.append("\tcmp eax,ebx\t\t; comparar resultado\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tjne " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; carrega ExpS.end\n");
+            }
+
         break;
 
         case TK_maior:
@@ -1346,6 +1520,78 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             }
             // nao houve erro, atribui tipo correto
             else tipo_ExpS = tipo_boolean;
+
+            /* GERAÇÃO DE CÓDIGO (>) */
+            // ambos operandos sao inteiros
+            if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
+                codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                codigoAssembly.append("\tmov ebx,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
+                codigoAssembly.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tjg " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; guarda resultado\n");
+            }
+            // pelo menos um operando eh float
+            if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
+                // ExpS eh inteiro
+                if(tipo_ExpS_aux == tipo_inteiro){
+                    codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                    codigoAssembly.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ real\n");
+                }
+                // ExpS eh real
+                else {
+                    codigoAssembly.append("\tmovss xmm0,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
+                }
+                
+                // ExpS1 eh inteiro
+                if(tipo_ExpS1 == tipo_inteiro){
+                    codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
+                    codigoAssembly.append("\tcvtsi2ss xmm1,eax \t\t; converte p/ real\n");
+                }
+                // ExpS1 eh real
+                else {
+                    codigoAssembly.append("\tmovss xmm1,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
+                }
+
+                // faz (>)
+                codigoAssembly.append("\tcomiss xmm0,xmm1\t\t; faz comparacao (ExpS e ExpS1)\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tja " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; carrega ExpS.end\n");
+            }
+            // ambos operandos sao caracteres
+            if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=0\n");
+                codigoAssembly.append("\tmov ebx,0 \t\t; ebx:=0\n");
+                codigoAssembly.append("\tmov al,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
+                codigoAssembly.append("\tmov bl,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
+                codigoAssembly.append("\tcmp eax,ebx\t\t; comparar resultado\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tjg " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; carrega ExpS.end\n");
+            }
+
         break;
 
         case TK_menor:
@@ -1367,6 +1613,79 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             }
             // nao houve erro, atribui tipo correto
             else tipo_ExpS = tipo_boolean;
+
+            /* GERAÇÃO DE CÓDIGO (<) */
+            // ambos inteiros
+            if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
+                codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                codigoAssembly.append("\tmov ebx,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
+                codigoAssembly.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tjl " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; guarda resultado\n");
+            }
+
+            // pelo menos um operando eh float
+            if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
+                // ExpS eh inteiro
+                if(tipo_ExpS_aux == tipo_inteiro){
+                    codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                    codigoAssembly.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ real\n");
+                }
+                // ExpS eh real
+                else {
+                    codigoAssembly.append("\tmovss xmm0,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
+                }
+                
+                // ExpS1 eh inteiro
+                if(tipo_ExpS1 == tipo_inteiro){
+                    codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
+                    codigoAssembly.append("\tcvtsi2ss xmm1,eax \t\t; converte p/ real\n");
+                }
+                // ExpS1 eh real
+                else {
+                    codigoAssembly.append("\tmovss xmm1,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
+                }
+
+                // faz (<)
+                codigoAssembly.append("\tcomiss xmm0,xmm1\t\t; comparar resultado\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tjb " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; armazenar exp1.end\n");
+            }
+            // ambos operandos sao caracteres
+            if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=0\n");
+                codigoAssembly.append("\tmov ebx,0 \t\t; ebx:=0\n");
+                codigoAssembly.append("\tmov al,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
+                codigoAssembly.append("\tmov bl,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
+                codigoAssembly.append("\tcmp eax,ebx\t\t; comparar resultado\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tjl " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; carrega ExpS.end\n");
+            }
+
         break;
 
         case TK_menorIgual:
@@ -1388,6 +1707,80 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             }
             // nao houve erro, atribui tipo correto
             else tipo_ExpS = tipo_boolean;
+
+            /* GERAÇÃO DE CÓDIGO (<=) */
+            // ambos operandos sao inteiros
+            if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
+                codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                codigoAssembly.append("\tmov ebx,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
+                codigoAssembly.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tjle " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; guarda resultado\n");
+            }
+
+            // pelo menos um operando eh float
+            if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
+                // ExpS eh inteiro
+                if(tipo_ExpS_aux == tipo_inteiro){
+                    codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                    codigoAssembly.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ real\n");
+                }
+                // ExpS eh real
+                else {
+                    codigoAssembly.append("\tmovss xmm0,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
+                }
+                
+                // ExpS1 eh inteiro
+                if(tipo_ExpS1 == tipo_inteiro){
+                    codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
+                    codigoAssembly.append("\tcvtsi2ss xmm1,eax \t\t; converte p/ real\n");
+                }
+                // ExpS1 eh real
+                else {
+                    codigoAssembly.append("\tmovss xmm1,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
+                }
+
+                // faz (<=)
+                codigoAssembly.append("\tcomiss xmm0,xmm1\t\t; faz comparacao (ExpS e ExpS1)\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tjbe " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; carrega ExpS.end\n");
+            }
+
+            // ambos operandos sao caracteres
+            if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=0\n");
+                codigoAssembly.append("\tmov ebx,0 \t\t; ebx:=0\n");
+                codigoAssembly.append("\tmov al,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
+                codigoAssembly.append("\tmov bl,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
+                codigoAssembly.append("\tcmp eax,ebx\t\t; comparar resultado\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tjle " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; carrega ExpS.end\n");
+            }
+
         break;
 
         case TK_maiorIgual:
@@ -1409,6 +1802,80 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             }
             // nao houve erro, atribui tipo correto
             else tipo_ExpS = tipo_boolean;
+
+            /* GERAÇÃO DE CÓDIGO (>=) */
+            // ambos operandos sao inteiros
+            if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
+                codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                codigoAssembly.append("\tmov ebx,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
+                codigoAssembly.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tjge " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; guarda resultado\n");
+            }
+
+            // pelo menos um operando eh float
+            if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
+                // ExpS eh inteiro
+                if(tipo_ExpS_aux == tipo_inteiro){
+                    codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                    codigoAssembly.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ real\n");
+                }
+                // ExpS eh real
+                else {
+                    codigoAssembly.append("\tmovss xmm0,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
+                }
+                
+                // ExpS1 eh inteiro
+                if(tipo_ExpS1 == tipo_inteiro){
+                    codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
+                    codigoAssembly.append("\tcvtsi2ss xmm1,eax \t\t; converte p/ real\n");
+                }
+                // ExpS1 eh real
+                else {
+                    codigoAssembly.append("\tmovss xmm1,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
+                }
+
+                // faz (>=)
+                codigoAssembly.append("\tcomiss xmm0,xmm1\t\t; faz comparacao (ExpS e ExpS1)\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tjae " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; carrega ExpS.end\n");
+            }
+
+            // ambos operandos sao caracteres
+            if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=0\n");
+                codigoAssembly.append("\tmov ebx,0 \t\t; ebx:=0\n");
+                codigoAssembly.append("\tmov al,[qword M+" + EnderecoHex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
+                codigoAssembly.append("\tmov bl,[qword M+" + EnderecoHex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
+                codigoAssembly.append("\tcmp eax,ebx\t\t; comparar resultado\n");
+                string rot_verdadeiro = NovoRot();
+                codigoAssembly.append("\tjge " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,0 \t\t; eax:=false\n");
+                string rot_fim = NovoRot();
+                codigoAssembly.append("\tjmp " + rot_fim + " \t\t; pula p/ rot_fim\n");
+                codigoAssembly.append(rot_verdadeiro + ": \t\t; rot_verdadeiro\n");
+                codigoAssembly.append("\tmov eax,1 \t\t; eax:=true\n");
+                codigoAssembly.append(rot_fim + ": \t\t; rot_fim\n");
+                end_ExpS = NovoTemp(4);
+                codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_ExpS) + "], eax\t\t; carrega ExpS.end\n");
+            }
+
         break;
     
     default:
@@ -1416,28 +1883,51 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
 
     }// fim switch
     *tipo_Exp = tipo_ExpS;
+    *tamanho_Exp = tamanho_ExpS;
+    *end_Exp = end_ExpS;
 }// fim Exp()
 
 
 /* Procedimento ExpS	
   ExpS -> [-] T { (+ | - | "||") T}	
 */	
-void ExpS(int* tipo_ExpS, int* tamanho_S, int* end_S) {	
-    int tipo_T, tamanho_T, end_T;	
+void ExpS(int* tipo_ExpS, int* tamanho_ExpS, int* end_ExpS) {	
+    int tipo_T, tamanho_T, end_T, tipo_T_aux;
     int tipo_T1, tamanho_T1, end_T1;
+    int end_aux;
 
-    bool subtracao = false;	
     bool adicao = false;
+    bool subtracao = false;	
 
     if (registroLexico.token == TK_menos){	
         subtracao = true;	
         casaToken(TK_menos);	
-    }	
-    T(&tipo_T, &tamanho_T, &end_T);	
+    }
+
+    T(&tipo_T, &tamanho_T, &end_T);
+
     // se possui o token '-', deve ser um numero	
     if (subtracao && (tipo_T != tipo_inteiro && tipo_T != tipo_float)){	
         showError(INCOMPATIBLE_TYPES, "");	
-    }	
+    }
+    // possui token '-' e eh um numero
+    else{
+        end_aux = NovoTemp(4);
+        if (tipo_T == tipo_inteiro){
+            // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_T) + "] \t\t; carrega [T.end] em eax\n");
+            // codigoAssembly.append("\tneg eax \t\t; nega valor de eax \n");
+            // codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_aux) + "],eax \t\t; copia resultado p/ novo endereco\n");
+        }
+        else{
+            // codigoAssembly.append("\tmovss xmm0,[qword M+" + EnderecoHex(end_T) + "] \t\t; carrega [T.end] em xmm0\n");
+            // codigoAssembly.append("\tmov eax,-1 \t\t; carrega eax com -1\n");
+            // codigoAssembly.append("\tcvtsi2ss xmm1,eax \t\t; converte eax p/ real\n");
+            // codigoAssembly.append("\tmulss xmm0,xmm1 \t\t; multiplica xmm0 por -1\n");
+            // codigoAssembly.append("\tmovss [qword M+" + EnderecoHex(end_aux) + "],xmm0 \t\t; copia resultado p/ novo endereco\n");
+        }
+        end_T = end_aux;
+    }
+
     while (registroLexico.token == TK_mais || registroLexico.token == TK_menos || registroLexico.token == TK_or) {	
         subtracao = adicao = false;	
         switch (registroLexico.token){	
@@ -1466,7 +1956,10 @@ void ExpS(int* tipo_ExpS, int* tamanho_S, int* end_S) {
                 break;	
         }// fim switch	
         	
-        T(&tipo_T1, &tamanho_T1, &end_T1);	
+        T(&tipo_T1, &tamanho_T1, &end_T1);
+
+        tipo_T_aux = tipo_T; // guarda tipo de T (usado na geracao de codigo)
+
         // checa tipos para +, -, ||	
         if (adicao || subtracao){	
             if (tipo_T1 != tipo_inteiro && tipo_T1 != tipo_float){	
@@ -1479,12 +1972,77 @@ void ExpS(int* tipo_ExpS, int* tamanho_S, int* end_S) {
                 tipo_T = tipo_float;	
             }	
         }	
+        // checa tipos p/ || 
         // ERRO se um termo for logico e o outro nao	
         else if (tipo_T == tipo_boolean && tipo_T1 != tipo_boolean){	
             showError(INCOMPATIBLE_TYPES, "");	
-        }	
+        }
+
+        /* GERAÇÃO DE CÓDIGO (+, -, ||) */
+        end_aux = NovoTemp(4);
+        if (adicao || subtracao){
+            // se resultado da operacao for um inteiro, ambos operandos (T e T1) sao inteiros
+            if (tipo_T == tipo_inteiro){
+                // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_T) + "]\t\t; carrega [T.end] em eax\n");
+                // codigoAssembly.append("\tmov ebx,[qword M+" + EnderecoHex(end_T1) + "]\t\t; carrega [T1.end] em ebx\n");
+                
+                if (adicao){
+                    // codigoAssembly.append("\tadd eax,ebx\t\t; faz adicao\n");
+                }
+                // subtracao
+                else{
+                    // codigoAssembly.append("\tsub eax,ebx\t\t; faz subtracao\n");
+                } 
+                // codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_aux) + "],eax \t\t; copia resultado p/ novo endereco\n");
+            }
+            // se resultado eh float, pelo menos um operando eh float
+            else{
+                // T eh inteiro
+                if(tipo_T_aux == tipo_inteiro){
+                    // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_T) + "]\t\t; carrega [T.end] em eax\n");
+                    // codigoAssembly.append("\tcvtsi2ss xmm0,eax\t\t; converte eax p/ real\n");
+                }
+                // T eh real
+                else{
+                    // codigoAssembly.append("\tmovss xmm0,[qword M+" + EnderecoHex(end_T) + "]\t\t; carrega [T.end] em xmm0\n");
+                }
+                // T1 eh inteiro
+                if(tipo_T1 == tipo_inteiro){
+                    // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_T1) + "]\t\t; carrega [T1.end] em eax\n");
+                    // codigoAssembly.append("\tcvtsi2ss xmm1,eax\t\t; converte reg para real\n");
+                }
+                // T1 eh real
+                else{
+                    // codigoAssembly.append("\tmovss xmm1,[qword M+" + EnderecoHex(end_T1) + "]\t\t; carrega [T1.end] em xmm1\n");
+                }
+
+                // faz a soma ou subtracao de T com T1
+                if(adicao) codigoAssembly.append("\taddss xmm0,xmm1 \t\t; faz adicao\n");
+                else codigoAssembly.append("\tsubss xmm0,xmm1 \t\t; faz subtracao\n");
+            }
+        }
+        // se a operacao for ||
+        else{
+            // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_T) + "]\t\t; carrega [T.end] em eax\n");
+            // codigoAssembly.append("\tneg eax \t\t; inverte o sinal\n");
+            // codigoAssembly.append("\tadd eax,1 \t\t; faz o complemento de 2\n");
+            // codigoAssembly.append("\tmov ebx,[qword M+" + EnderecoHex(end_T1) + "]\t\t; carrega [T1.end] em ebx\n");
+            // codigoAssembly.append("\tneg ebx \t\t; inverte o sinal\n");
+            // codigoAssembly.append("\tadd ebx,1 \t\t; faz o complemento de 2\n");
+            // codigoAssembly.append("\tmov edx,0 \t\t; limpa edx p/ multiplicacao, caso haja overflow\n");
+            // codigoAssembly.append("\timul ebx \t\t; faz imul, que executa o papel do ||\n");
+            // codigoAssembly.append("\tneg eax \t\t; inverte o sinal\n");
+            // codigoAssembly.append("\tadd eax,1 \t\t; soma 1 em eax p/ finalizar o ||\n");
+            // codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_aux) + "],eax \t\t; copia resultado p/ novo endereco\n");
+        }
+
+        end_T = end_aux;
+
     }// fim while	
-    *tipo_ExpS = tipo_T;	
+    
+    *tipo_ExpS = tipo_T;
+    *tamanho_ExpS = tamanho_T;
+    *end_ExpS = end_T;
 }
 
 /* Procedimento T
@@ -1494,8 +2052,7 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
     int tipo_F, tamanho_F, end_F;
     int tipo_F1, tamanho_F1, end_F1;
 
-    bool multiplicacao = false;
-    bool divisao = false;
+    bool multiplicacao, and_logico, divisao, div, mod;
     
     F(&tipo_F, &tamanho_F, &end_F);
     
@@ -1506,7 +2063,7 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
         registroLexico.token == TK_div       || 
         registroLexico.token == TK_mod
     ) {
-        multiplicacao = divisao = false;
+        multiplicacao = and_logico = divisao = div = mod = false;
 
         switch(registroLexico.token){
             case TK_barra:
@@ -1539,6 +2096,7 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
                     showError(INCOMPATIBLE_TYPES, "");
                 }
 
+                and_logico = true;
                 break;
 
 
@@ -1550,6 +2108,7 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
                     showError(INCOMPATIBLE_TYPES, "");
                 }
 
+                div = true;
                 break;
 
             case TK_mod:
@@ -1560,6 +2119,7 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
                     showError(INCOMPATIBLE_TYPES, "");
                 }
 
+                mod = true;
                 break;
         }// fim switch
         
@@ -1571,31 +2131,148 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
             if (tipo_F1 != tipo_inteiro && tipo_F1 != tipo_float){
                 showError(INCOMPATIBLE_TYPES, "");
             }
-            // se for divisao o resultado sera um numero real
             else if (divisao){
+                // ambos operandos inteiros
+                if (tipo_F == tipo_inteiro && tipo_F1 == tipo_inteiro){
+                    
+                    // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_F) + "]\t\t; carrega [F.end] em eax\n");
+                    // codigoAssembly.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ float e armazena em xmm0\n");
+                    // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_F1) + "]\t\t; carrega [F1.end] em eax\n");
+                    // codigoAssembly.append("\tcvtsi2ss xmm1,eax\t\t; converte p/ float e armazena em xmm1\n");
+                    // codigoAssembly.append("\tdivss xmm0,xmm1\t\t; faz a divisao\n");
+                    // end_F = NovoTemp(4);
+                    // codigoAssembly.append("\tmovss [qword M+" + EnderecoHex(end_F) + "],xmm0 \t\t; copia resultado p/ novo endereco\n");
+                }
+                // apenas F for float
+                else if (tipo_F == tipo_float && tipo_F1 != tipo_float){
+                    
+                    // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_F1) + "]\t\t; carrega [F1.end] em eax\n");
+                    // codigoAssembly.append("\tcvtsi2ss xmm1,eax\t\t; converte p/ float e armazena em xmm1\n");
+                    // codigoAssembly.append("\tmovss xmm0,[qword M+" + EnderecoHex(end_F) + "]\t\t; carrega F.end em xmm0\n");
+                    // codigoAssembly.append("\tdivss xmm0,xmm1\t\t; faz a divisao\n");
+                    // end_F = NovoTemp(4);
+                    // codigoAssembly.append("\tmovss [qword M+" + EnderecoHex(end_F) + "],xmm0 \t\t; copia resultado p/ novo endereco\n");
+                }
+                // apenas F1 for float
+                else if (tipo_F1 == tipo_float && tipo_F != tipo_float){
+
+                    // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_F) + "]\t\t; carrega [F.end] em eax\n");
+                    // codigoAssembly.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ float e armazena em xmm0\n");
+                    // codigoAssembly.append("\tmovss xmm1,[qword M+" + EnderecoHex(end_F1) + "]\t\t; carrega F1.end em xmm1\n");
+                    // codigoAssembly.append("\tdivss xmm0,xmm1\t\t; faz a divisao\n");
+                    // end_F = NovoTemp(4);
+                    // codigoAssembly.append("\tmovss [qword M+" + EnderecoHex(end_F) + "],xmm0 \t\t; copia resultado p/ novo endereco\n");
+                }
+                // ambos float
+                else{
+                    
+                    // codigoAssembly.append("\tmovss xmm0,[qword M+" + EnderecoHex(end_F) + "]\t\t; carrega F.end em xmm0\n");
+                    // codigoAssembly.append("\tmovss xmm1,[qword M+" + EnderecoHex(end_F1) + "]\t\t; carrega F1.end em xmm1\n");
+                    // codigoAssembly.append("\tdivss xmm0,xmm1\t\t; faz a divisao\n");
+                    // end_F = NovoTemp(4);
+                    // codigoAssembly.append("\tmovss [qword M+" + EnderecoHex(end_F) + "],xmm0 \t\t; copia resultado p/ novo endereco\n");
+                }
+                
+                // resultado eh real se for divisao
                 tipo_F = tipo_float;
             }
             // multiplicacao
+            // ambos fatores inteiros
             else if (tipo_F == tipo_inteiro && tipo_F1 == tipo_inteiro){
-                // ambos fatores inteiros, resultado inteiro
+
+                /* GERAÇÃO DE CÓDIGO */
+                
+                // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_F) + "]\t\t; carrega [F.end] em eax\n");
+                // codigoAssembly.append("\tmov ebx,[qword M+" + EnderecoHex(end_F1) + "]\t\t; carrega F1.end em ebx\n");
+                // codigoAssembly.append("\tmov edx,0 \t\t; limpa edx p/ multiplicacao, caso haja overflow\n");
+                // codigoAssembly.append("\timul ebx\t\t; multiplica\n");
+                // end_F = NovoTemp(4);
+                // codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_F) + "],eax \t\t; copia resultado p/ novo endereco\n");
+                
+                // resultado inteiro se ambos fatores inteiros
                 tipo_F = tipo_inteiro;
             }
+            // pelo menos um fator real
             else{
-                // se pelo menos um fator for real, resultado sera real
+                // apenas F for float
+                if (tipo_F == tipo_float && tipo_F1 != tipo_float){
+                    
+                    // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_F1) + "]\t\t; carrega [F1.end] em eax\n");
+                    // codigoAssembly.append("\tcvtsi2ss xmm1,eax\t\t; converte p/ float e armazena em xmm1\n");
+                    // codigoAssembly.append("\tmovss xmm0,[qword M+" + EnderecoHex(end_F) + "]\t\t; carrega F.end em xmm0\n");
+                    // codigoAssembly.append("\tmulss xmm0,xmm1\t\t; multiplica\n");
+                    // end_F = NovoTemp(4);
+                    // codigoAssembly.append("\tmovss [qword M+" + EnderecoHex(end_F) + "],xmm0 \t\t; copia resultado p/ novo endereco\n");
+                }
+                // apenas F1 for float
+                else if (tipo_F1 == tipo_float && tipo_F != tipo_float){
+                    
+                    // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_F) + "]\t\t; carrega [F.end] em eax\n");
+                    // codigoAssembly.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ float e armazena em xmm0\n");
+                    // codigoAssembly.append("\tmovss xmm1,[qword M+" + EnderecoHex(end_F1) + "]\t\t; carrega F1.end em xmm1\n");
+                    // codigoAssembly.append("\tmulss xmm0,xmm1\t\t; multiplica\n");
+                    // end_F = NovoTemp(4);
+                    // codigoAssembly.append("\tmovss [qword M+" + EnderecoHex(end_F) + "],xmm0 \t\t; copia resultado p/ novo endereco\n");
+                }
+                // ambos float
+                else{
+                    // codigoAssembly.append("\tmovss xmm0,[qword M+" + EnderecoHex(end_F) + "]\t\t; carrega F1.end em xmm0\n");
+                    // codigoAssembly.append("\tmovss xmm1,[qword M+" + EnderecoHex(end_F1) + "]\t\t; carrega F1.end em xmm1\n");
+                    // codigoAssembly.append("\tmulss xmm0,xmm1\t\t; multiplica\n");
+                    // end_F = NovoTemp(4);
+                    // codigoAssembly.append("\tmovss [qword M+" + EnderecoHex(end_F) + "],xmm0 \t\t; copia resultado p/ novo endereco\n");
+                }
+                
+                // resultado eh real se pelo menos um fator for real
                 tipo_F = tipo_float;
             }
         }
-        // && exige que os 2 fatores sejam logicos
-        else if (tipo_F == tipo_boolean && tipo_F1 != tipo_boolean){
-            showError(INCOMPATIBLE_TYPES, "");
+        else if (and_logico){ 
+            // && exige que os 2 fatores sejam logicos
+            if (tipo_F == tipo_boolean && tipo_F1 != tipo_boolean){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // faz o &&
+            else{
+                // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_F) + "]\t\t; carrega [F.end] em eax\n");
+                // codigoAssembly.append("\tmov ebx,[qword M+" + EnderecoHex(end_F1) + "]\t\t; carrega F1.end em ebx\n");
+                // codigoAssembly.append("\tmov edx,0 \t\t; limpa edx p/ multiplicacao, caso haja overflow\n");
+                // codigoAssembly.append("\timul ebx\t\t; multiplica\n");
+                // end_F = NovoTemp(4);
+                // codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_F) + "],eax \t\t; copia resultado p/ novo endereco\n");
+            }
         }
-        // div e mod exigem que os 2 fatores sejam inteiros
-        else if (tipo_F == tipo_inteiro && tipo_F1 != tipo_inteiro){
-            showError(INCOMPATIBLE_TYPES, "");
+        else if (div || mod){ 
+            // div e mod exigem que os 2 fatores sejam inteiros
+            if (tipo_F == tipo_inteiro && tipo_F1 != tipo_inteiro){
+                showError(INCOMPATIBLE_TYPES, "");
+            }
+            // faz o div
+            else if (div){
+                // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_F) + "]\t\t; carrega [F.end] em eax\n");
+                // codigoAssembly.append("\tmov ebx,[qword M+" + EnderecoHex(end_F1) + "]\t\t; carrega F1.end em ebx\n");
+                // codigoAssembly.append("\tmov edx,0 \t\t; limpa edx p/ multiplicacao, caso haja overflow\n");
+                // codigoAssembly.append("\tidiv ebx\t\t; faz a divisao (pega o quociente da operacao na prox instrucao)\n");
+                // end_F = NovoTemp(4);
+                // codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_F) + "],eax \t\t; copia resultado p/ novo endereco\n");
+            }
+            // faz o mod
+            else{
+                // codigoAssembly.append("\tmov eax,[qword M+" + EnderecoHex(end_F) + "]\t\t; carrega [F.end] em eax\n");
+                // codigoAssembly.append("\tmov ebx,[qword M+" + EnderecoHex(end_F1) + "]\t\t; carrega F1.end em ebx\n");
+                // codigoAssembly.append("\tmov edx,0 \t\t; limpa edx p/ multiplicacao, caso haja overflow\n");
+                // codigoAssembly.append("\tidiv ebx\t\t; faz a divisao (pega o resto da operacao na prox instrucao)\n");
+                // end_F = NovoTemp(4);
+                // codigoAssembly.append("\tmov [qword M+" + EnderecoHex(end_F) + "],edx \t\t; copia resultado p/ novo endereco\n");
+            }
         }
+
+
     }// fim while
 
     *tipo_T = tipo_F;
+    *tamanho_T = tamanho_F;
+    *end_T = end_F;
 }// fim T()
 
 /* Procedimento F
