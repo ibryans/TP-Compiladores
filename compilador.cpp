@@ -119,7 +119,7 @@ int cont_dados = 65536; // 10000h em decimal
 int cont_temps = 0;
 
 string novo_rotulo(){
-    string novo_rotulo = "R" + to_string(rotulo++);
+    string novo_rotulo = "rotulo" + to_string(rotulo++);
 
     return novo_rotulo;
 }
@@ -144,6 +144,13 @@ string int2hex(int number){
 
     return ss.str();
 }
+// EXCLUIR METODO ABAIXO 
+// string int2hex(int end) {
+//     char endHex[40];
+//     sprintf(endHex,"0x%X",end);
+
+//     return string(endHex);
+// }
 
 /** Tabela de símbolos, armazenando identificadores e palavras reservadas da linguagem */
 class Tabela_simbolos {
@@ -913,7 +920,6 @@ void Dec() {
         else
             casaToken(TK_false);
 
-
         if (negativo) {
             // ERRO se a constante nao for um numero
             if (rl_const.tipo != tipo_inteiro && rl_const.tipo != tipo_float){
@@ -964,7 +970,7 @@ void Dec() {
     // (int | float | char | string) id [:= [-] constante] {, id [:= [-] constante]}
     else if(registroLexico.token == TK_int || registroLexico.token == TK_float || registroLexico.token == TK_char || registroLexico.token == TK_string){
         int end_aux, tipo_id = -999; // auxiliares
-
+        
         if (registroLexico.token == TK_int){
             tipo_id = tipo_inteiro;
             casaToken(TK_int);
@@ -1031,9 +1037,11 @@ void Dec() {
                 }
                 negativo = true;
             }
+            // rl_const = {};
             // salva copia do reg lexico antes de casar o prox token
             rl_const = registroLexico;
             casaToken(TK_const);
+
 
             // ERRO se nao for numero e possuir o token '-'
             if ((rl_const.tipo != tipo_inteiro && rl_const.tipo != tipo_float) && negativo){
@@ -1049,57 +1057,117 @@ void Dec() {
             else if (simb_id.tipo != rl_const.tipo){
                 showError(INCOMPATIBLE_TYPES, "");
             }
+
+            // id inteiro
+            if(simb_id.tipo == tipo_inteiro){
+                codigo_asm.append("\tmov eax," + rl_const.lexema + " \t\t; carrega a constante em eax\n");
+                if (negativo) {
+                    codigo_asm.append("\tneg eax \t\t; inverte sinal de eax\n");
+                }
+                codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "],eax \t\t; id recebe o valor da constante\n");
+            }
+            // id float
+            else if(simb_id.tipo == tipo_float){
+                codigo_asm.append("\nsection .data \t\t; seção de dados\n");
+                // adiciona 0 se o numero comecar com .
+                if (rl_const.lexema[0] == '.') rl_const.lexema = '0' + rl_const.lexema;
+
+                if(negativo){
+                    codigo_asm.append("\tdd -" + rl_const.lexema + " \t\t; reserva 4 bytes e escreve a constante\n");
+                } else codigo_asm.append("\tdd " + rl_const.lexema + " \t\t; reserva 4 bytes e escreve a constante\n");
+
+                codigo_asm.append("\nsection .text \t\t; voltando p/ seção de código\n");
+                int end_float = novo_dado(4);
+                codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_float) + "] \t\t; carrega a constante em xmm0\n");
+                codigo_asm.append("\tmovss [qword M+" + int2hex(simb_id.endereco) + "],xmm0 \t\t; id recebe o valor da constante\n");
+            }
+            // id char
+            else if (simb_id.tipo == tipo_caractere){
+                codigo_asm.append("\tmov al," + rl_const.lexema + " \t\t; carrega a constante em eax\n");
+                codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "], al \t\t; id recebe o valor da constante\n");
+            }
+            // id string
+            else{
+
+                codigo_asm.append("\nsection .data \t\t; seção de dados\n");
+                codigo_asm.append("\tdb " + rl_const.lexema + ",0 \t\t; reserva tamanho da string + indicador de fim da string\n");
+                codigo_asm.append("\nsection .text \t\t; voltando p/ seção de código\n");
+
+                int end_str = novo_dado(rl_const.tamanho+1); // +1 em funcao do ',0' (indicador de fim da string)
+                simb_id.tamanho = rl_const.tamanho;
+                tab_simbolos.update(lex_id, simb_id); // atualiza TS
+
+                codigo_asm.append("\tmov rax,qword M+" + int2hex(end_str) + "\t\t; carrega endereco da constante em rax\n");
+                codigo_asm.append("\tmov rbx,qword M+" + int2hex(simb_id.endereco) + "\t\t; carrega endereco de id em rbx\n");
+                string next_char = novo_rotulo();
+                codigo_asm.append(next_char + ": \t\t; rotulo p/ ler proximo char da str\n");
+                codigo_asm.append("\tmov al, [rax] \t\t; guarda o char atual da constante\n");
+                codigo_asm.append("\tmov [rbx], al \t\t; carrega esse char em id\n");
+                codigo_asm.append("\tadd rax, 1 \t\t; avanca p/ proximo char da constante\n");
+                codigo_asm.append("\tadd rbx, 1 \t\t; avanca p/ proximo char de id\n");
+                codigo_asm.append("\tcmp al,0 \t\t; checa se eh fim da str\n");
+                codigo_asm.append("\tjne " + next_char + "\t\t; se nao eh fim, continua o loop\n");
+            }
+
         }// fim if
         
-        // id inteiro
-        if(simb_id.tipo == tipo_inteiro){
-            codigo_asm.append("\tmov eax," + rl_const.lexema + " \t\t; carrega a constante em eax\n");
-            if (negativo) {
-                codigo_asm.append("\tneg eax \t\t; inverte sinal de eax\n");
-            }
-            codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "],eax \t\t; id recebe o valor da constante\n");
-        }
-        // id float
-        else if(simb_id.tipo == tipo_float){
-            codigo_asm.append("\nsection .data \t\t; seção de dados\n");
-            // adiciona 0 se o numero comecar com .
-            if (rl_const.lexema[0] == '.') rl_const.lexema = '0' + rl_const.lexema;
 
-            if(negativo){
-                codigo_asm.append("\tdd -" + rl_const.lexema + " \t\t; reserva 4 bytes e escreve a constante\n");
-            } else codigo_asm.append("\tdd " + rl_const.lexema + " \t\t; reserva 4 bytes e escreve a constante\n");
+        // cout << "rl_const.lexema = " << rl_const.lexema << endl;
+        // cout << "rl_const.tamanho = " << rl_const.tamanho << endl;
+        // cout << "rl_const.tipo = " << rl_const.tipo << endl;
+        // cout << "rl_const.token = " << rl_const.token << endl;
+        // cout << "simb_id.tipo = " << simb_id.tipo << endl;
+        // cout << endl;
+        // // id inteiro
+        // if(simb_id.tipo == tipo_inteiro){
+        //     codigo_asm.append("\tmov eax," + rl_const.lexema + " \t\t; carrega a constante em eax\n");
+        //     if (negativo) {
+        //         codigo_asm.append("\tneg eax \t\t; inverte sinal de eax\n");
+        //     }
+        //     codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "],eax \t\t; id recebe o valor da constante\n");
+        // }
+        // // id float
+        // else if(simb_id.tipo == tipo_float){
+        //     codigo_asm.append("\nsection .data \t\t; seção de dados\n");
+        //     // adiciona 0 se o numero comecar com .
+        //     if (rl_const.lexema[0] == '.') rl_const.lexema = '0' + rl_const.lexema;
 
-            codigo_asm.append("\nsection .text \t\t; voltando p/ seção de código\n");
-            int end_float = novo_dado(4);
-            codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_float) + "] \t\t; carrega a constante em xmm0\n");
-            codigo_asm.append("\tmovss [qword M+" + int2hex(simb_id.endereco) + "],xmm0 \t\t; id recebe o valor da constante\n");
-        }
-        // id char
-        else if (simb_id.tipo == tipo_caractere){
-            codigo_asm.append("\tmov al," + rl_const.lexema + " \t\t; carrega a constante em eax\n");
-            codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "],al \t\t; id recebe o valor da constante\n");
-        }
-        // id string
-        else{
-            codigo_asm.append("\nsection .data \t\t; seção de dados\n");
-            codigo_asm.append("\tdb " + rl_const.lexema + ",0 \t\t; reserva tamanho da string + indicador de fim da string\n");
-            codigo_asm.append("\nsection .text \t\t; voltando p/ seção de código\n");
+        //     if(negativo){
+        //         codigo_asm.append("\tdd -" + rl_const.lexema + " \t\t; reserva 4 bytes e escreve a constante\n");
+        //     } else codigo_asm.append("\tdd " + rl_const.lexema + " \t\t; reserva 4 bytes e escreve a constante\n");
 
-            int end_str = novo_dado(rl_const.tamanho+1); // +1 em funcao do ',0' (indicador de fim da string)
-            simb_id.tamanho = rl_const.tamanho;
-            tab_simbolos.update(lex_id, simb_id); // atualiza TS
+        //     codigo_asm.append("\nsection .text \t\t; voltando p/ seção de código\n");
+        //     int end_float = novo_dado(4);
+        //     codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_float) + "] \t\t; carrega a constante em xmm0\n");
+        //     codigo_asm.append("\tmovss [qword M+" + int2hex(simb_id.endereco) + "],xmm0 \t\t; id recebe o valor da constante\n");
+        // }
+        // // id char
+        // else if (simb_id.tipo == tipo_caractere){
+        //     codigo_asm.append("\tmov al," + rl_const.lexema + " \t\t; carrega a constante em eax\n");
+        //     codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "], al \t\t; id recebe o valor da constante\n");
+        // }
+        // // id string
+        // else{
 
-            codigo_asm.append("\tmov rax,qword M+" + int2hex(end_str) + "\t\t; carrega endereco da constante em rax\n");
-            codigo_asm.append("\tmov rbx,qword M+" + int2hex(simb_id.endereco) + "\t\t; carrega endereco de id em rbx\n");
-            string next_char = novo_rotulo();
-            codigo_asm.append(next_char + ": \t\t; rotulo p/ ler proximo char da str\n");
-            codigo_asm.append("\tmov al, [rax] \t\t; guarda o char atual da constante\n");
-            codigo_asm.append("\tmov [rbx],al \t\t; carrega esse char em id\n");
-            codigo_asm.append("\tadd rax, 1 \t\t; avanca p/ proximo char da constante\n");
-            codigo_asm.append("\tadd rbx, 1 \t\t; avanca p/ proximo char de id\n");
-            codigo_asm.append("\tcmp al,0 \t\t; checa se eh fim da str\n");
-            codigo_asm.append("\tjne " + next_char + "\t\t; se nao eh fim, continua o loop\n");
-        }
+        //     codigo_asm.append("\nsection .data \t\t; seção de dados\n");
+        //     codigo_asm.append("\tdb TRES" + rl_const.lexema + ",0 \t\t; reserva tamanho da string + indicador de fim da string\n");
+        //     codigo_asm.append("\nsection .text \t\t; voltando p/ seção de código\n");
+
+        //     int end_str = novo_dado(rl_const.tamanho+1); // +1 em funcao do ',0' (indicador de fim da string)
+        //     simb_id.tamanho = rl_const.tamanho;
+        //     tab_simbolos.update(lex_id, simb_id); // atualiza TS
+
+        //     codigo_asm.append("\tmov rax,qword M+" + int2hex(end_str) + "\t\t; carrega endereco da constante em rax\n");
+        //     codigo_asm.append("\tmov rbx,qword M+" + int2hex(simb_id.endereco) + "\t\t; carrega endereco de id em rbx\n");
+        //     string next_char = novo_rotulo();
+        //     codigo_asm.append(next_char + ": \t\t; rotulo p/ ler proximo char da str\n");
+        //     codigo_asm.append("\tmov al, [rax] \t\t; guarda o char atual da constante\n");
+        //     codigo_asm.append("\tmov [rbx], al \t\t; carrega esse char em id\n");
+        //     codigo_asm.append("\tadd rax, 1 \t\t; avanca p/ proximo char da constante\n");
+        //     codigo_asm.append("\tadd rbx, 1 \t\t; avanca p/ proximo char de id\n");
+        //     codigo_asm.append("\tcmp al,0 \t\t; checa se eh fim da str\n");
+        //     codigo_asm.append("\tjne " + next_char + "\t\t; se nao eh fim, continua o loop\n");
+        // }
 
 
         while(registroLexico.token == TK_virgula){
@@ -1201,7 +1269,7 @@ void Dec() {
                 // id char
                 else if (simb_id.tipo == tipo_caractere){
                     codigo_asm.append("\tmov al," + rl_const.lexema + " \t\t; carrega a constante em eax\n");
-                    codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "],al \t\t; id recebe o valor da constante\n");
+                    codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "], al \t\t; id recebe o valor da constante\n");
                 }
                 // id string
                 else{
@@ -1218,7 +1286,7 @@ void Dec() {
                     string next_char = novo_rotulo();
                     codigo_asm.append(next_char + ": \t\t; rotulo p/ ler proximo char da str\n");
                     codigo_asm.append("\tmov al, [rax] \t\t; guarda o char atual da constante\n");
-                    codigo_asm.append("\tmov [rbx],al \t\t; carrega esse char em id\n");
+                    codigo_asm.append("\tmov [rbx], al \t\t; carrega esse char em id\n");
                     codigo_asm.append("\tadd rax, 1 \t\t; avanca p/ proximo char da constante\n");
                     codigo_asm.append("\tadd rbx, 1 \t\t; avanca p/ proximo char de id\n");
                     codigo_asm.append("\tcmp al,0 \t\t; checa se eh fim da str\n");
@@ -1272,7 +1340,7 @@ void Dec() {
             }
         
             codigo_asm.append("\tmov al," + rl_const.lexema + " \t\t; carrega a constante em eax\n");
-            codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "],al \t\t; id recebe o valor da constante\n");
+            codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "], al \t\t; id recebe o valor da constante\n");
         }
 
 
@@ -1317,7 +1385,7 @@ void Dec() {
                 }
 
                 codigo_asm.append("\tmov al," + rl_const.lexema + " \t\t; carrega a constante em eax\n");
-                codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "],al \t\t; id recebe o valor da constante\n");
+                codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "], al \t\t; id recebe o valor da constante\n");
             }
         }// fim while
     }
@@ -1529,7 +1597,7 @@ void Comandos(){
             // id char, Exp char
             else if (simb_id.tipo == tipo_caractere){
                 codigo_asm.append("\tmov al, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em al\n");
-                codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "],al \t\t; carrega id.end com Exp.end\n");
+                codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "], al \t\t; carrega id.end com Exp.end\n");
             }
             // id float
             else if (simb_id.tipo == tipo_float){
@@ -1554,7 +1622,7 @@ void Comandos(){
                     codigo_asm.append("\tmov rbx, [qword M+" + int2hex(posicao_string) + "] \t\t; rbx recebe posicao do char\n");
                     codigo_asm.append("\tadd rax,rbx \t\t; soma inicio da string com posicao do char\n");
                     codigo_asm.append("\tmov al, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em al\n");
-                    codigo_asm.append("\tmov [rax],al \t\t; salva [Exp.end] em id[pos]\n");  
+                    codigo_asm.append("\tmov [rax], al \t\t; salva [Exp.end] em id[pos]\n");  
                 }
                 // id string, Exp string
                 else{
@@ -1563,7 +1631,7 @@ void Comandos(){
                     string next_char = novo_rotulo();
                     codigo_asm.append(next_char + ": \t\t; rotulo p/ ler proximo char da str\n");
                     codigo_asm.append("\tmov al, [rax] \t\t; guarda o char atual de Exp\n");
-                    codigo_asm.append("\tmov [rbx],al \t\t; carrega esse char em id\n");
+                    codigo_asm.append("\tmov [rbx], al \t\t; carrega esse char em id\n");
                     codigo_asm.append("\tadd rax, 1 \t\t; avanca p/ proximo char de Exp\n");
                     codigo_asm.append("\tadd rbx, 1 \t\t; avanca p/ proximo char de id\n");
                     codigo_asm.append("\tcmp al,0 \t\t; checa se eh fim da str\n");
@@ -1809,7 +1877,7 @@ void Comandos(){
                     codigo_asm.append("\tjne " + R2 + "\t\t;se não pilha vazia, loop\n");
                     
 
-                    codigo_asm.append(";executa interrupção de saída\n");
+                    codigo_asm.append(";executa interrupção de saída\n\n");
 
                     codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
                     codigo_asm.append("\tmov rdx, rdi\t\t; tamanho da string\n");
@@ -1895,7 +1963,7 @@ void Comandos(){
                     codigo_asm.append("\tsub rdx, rbx \t\t;tam=rsi-M-buffer.end\n");
                     
 
-                    codigo_asm.append(";executa interrupção de saída\n");
+                    codigo_asm.append(";executa interrupção de saída\n\n");
 
                     codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
                     codigo_asm.append("\t\t\t; tamanho da string ja está em rdx\n");
@@ -1905,43 +1973,44 @@ void Comandos(){
                 }
                 // escreve char
                 else if (tipo_Exp = tipo_caractere){
-                    codigo_asm.append("\tmov edx,0 \t\t; zera contador\n");
+                    cout << "oi";
+                    codigo_asm.append("\tmov rax,0 \t\t; zera contador\n");
                     end_aux = novo_temp(2); // 1 byte a mais p/ quebra de linha
 
                     codigo_asm.append("\tmov al, [M+" + int2hex(end_Exp) + "] \t\t; carrega char no registrador temporario\n");
                     codigo_asm.append("\tmov [qword M+" +int2hex(end_aux) + "], al\t\t; novo_temp recebe o char\n");
-                    codigo_asm.append("\tmov edx,1 \t\t; cont:=1 byte\n");
+                    codigo_asm.append("\tmov rax,1 \t\t; cont:=1 byte\n");
 
                     
-                    codigo_asm.append(";executa interrupção de saída\n");
+                    codigo_asm.append(";executa interrupção de saída\n\n");
                     
                     codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
-                    codigo_asm.append("\tmov rdx, edx\t\t; tamanho do char\n");
+                    codigo_asm.append("\tmov rdx, rax\t\t; tamanho do char\n");
                     codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
                     codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
                     codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
                 }
                 // escreve boolean
                 else if(tipo_Exp = tipo_boolean){
-                    codigo_asm.append("\tmov edx,0 \t\t; zera contador\n");
+                    codigo_asm.append("\tmov rax,0 \t\t; zera contador\n");
                     end_aux = novo_temp(2); // 1 byte a mais p/ quebra de linha
 
                     codigo_asm.append("\tmov al, [M+" + int2hex(end_Exp) + "] \t\t; carrega char no registrador temporario\n");
                     codigo_asm.append("\tmov [qword M+" +int2hex(end_aux) + "], al\t\t; novo_temp recebe o char\n");
-                    codigo_asm.append("\tmov edx,1 \t\t; cont:=1 byte\n");
+                    codigo_asm.append("\tmov rax,1 \t\t; cont:=1 byte\n");
 
 
-                    codigo_asm.append(";executa interrupção de saída\n");
+                    codigo_asm.append(";executa interrupção de saída\n\n");
 
                     codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
-                    codigo_asm.append("\tmov rdx, edx\t\t; tamanho do booleano\n");
+                    codigo_asm.append("\tmov rdx, rax\t\t; tamanho do booleano\n");
                     codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
                     codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
                     codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
                 }
                 // escreve string
                 else{
-                    codigo_asm.append("\tmov edx,0 \t\t; zera contador\n");
+                    codigo_asm.append("\tmov rcx,0 \t\t; zera contador\n");
                     end_aux = novo_temp(tamanho_Exp+1); // 1 byte a mais p/ quebra de linha
 
                     codigo_asm.append("\tmov rax, qword M+" + int2hex(end_Exp) + "\t\t; rax recebe endereco de Exp\n");
@@ -1949,18 +2018,18 @@ void Comandos(){
                     string next_char = novo_rotulo();
                     codigo_asm.append("\tmov al, [rax] \t\t; guarda o char atual da string\n");
                     codigo_asm.append("\tmov [rbx], al \t\t; salva esse char no temp\n");
-                    codigo_asm.append("\tadd edx,1 \t\t; contador++\n");
+                    codigo_asm.append("\tadd rcx,1 \t\t; contador++\n");
                     codigo_asm.append("\tadd rax, 1 \t\t; proximo char (Exp)\n");
                     codigo_asm.append("\tadd rbx, 1 \t\t; proximo char (temp)\n");
                     codigo_asm.append("\tcmp al,0 \t\t; checa se eh fim da str\n");
                     codigo_asm.append("\tjne " + next_char + "\t\t; se não eh o fim, continua o loop (jump p/ next_char)\n");
-                    codigo_asm.append("\tsub edx,1 \t\t; contador-- (remove o fim da str)\n");
+                    codigo_asm.append("\tsub rcx,1 \t\t; contador-- (remove o fim da str)\n");
 
 
-                    codigo_asm.append(";executa interrupção de saída\n");
+                    codigo_asm.append(";executa interrupção de saída\n\n");
                     
                     codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
-                    codigo_asm.append("\tmov rdx, edx\t\t; tamanho da str\n");
+                    codigo_asm.append("\tmov rdx, rcx\t\t; tamanho da str\n");
                     codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
                     codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
                     codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
@@ -2027,7 +2096,7 @@ void Comandos(){
                     codigo_asm.append("\tmov [rsi], al\t\t; ultima posicao ([rsi]) recebe quebra de linha\n");
                 }
 
-                codigo_asm.append(";executa interrupção de saída\n");
+                codigo_asm.append(";executa interrupção de saída\n\n");
 
                 codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
                 codigo_asm.append("\tmov rdx, rdi\t\t; tamanho da string\n");
@@ -2118,7 +2187,7 @@ void Comandos(){
                     codigo_asm.append("\tadd rsi, 1 \t\t;incrementa base\n");
                 }
 
-                codigo_asm.append(";executa interrupção de saída\n");
+                codigo_asm.append(";executa interrupção de saída\n\n");
 
                 codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
                 codigo_asm.append("\t\t\t; tamanho da string ja está em rdx\n");
@@ -2128,57 +2197,58 @@ void Comandos(){
             }
             // escreve char
             else if (tipo_Exp = tipo_caractere){
-                codigo_asm.append("\tmov edx,0 \t\t; zera contador\n");
+                cout << "oi";
+                codigo_asm.append("\tmov rax,0 \t\t; zera contador\n");
                 end_aux = novo_temp(2); // 1 byte a mais p/ quebra de linha
 
                 codigo_asm.append("\tmov al, [M+" + int2hex(end_Exp) + "] \t\t; carrega char no registrador temporario\n");
                 codigo_asm.append("\tmov [qword M+" +int2hex(end_aux) + "], al\t\t; novo_temp recebe o char\n");
-                codigo_asm.append("\tmov edx,1 \t\t; cont:=1 byte\n");
+                codigo_asm.append("\tmov rax,1 \t\t; cont:=1 byte\n");
 
                 if(writeln){
                     codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
-                    codigo_asm.append("\tadd rsi, edx \t\t; soma contador ao inicio\n");
+                    codigo_asm.append("\tadd rsi, rax \t\t; soma contador ao inicio\n");
                     codigo_asm.append("\tmov al, 0xA \t\t; reg. al recebe quebra de linha\n");
                     codigo_asm.append("\tmov [rsi], al \t\t; quebra de linha no final do char\n");
-                    codigo_asm.append("\tadd edx, 1 \t\t; contador++ p/ n dar pau com a quebra de linha\n");
+                    codigo_asm.append("\tadd rax, 1 \t\t; contador++ p/ n dar pau com a quebra de linha\n");
                 }
                 
-                codigo_asm.append(";executa interrupção de saída\n");
+                codigo_asm.append(";executa interrupção de saída\n\n");
                 
                 codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
-                codigo_asm.append("\tmov rdx, edx\t\t; tamanho do char\n");
+                codigo_asm.append("\tmov rdx, rax\t\t; tamanho do char\n");
                 codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
                 codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
                 codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
             }
             // escreve boolean
             else if(tipo_Exp = tipo_boolean){
-                codigo_asm.append("\tmov edx,0 \t\t; zera contador\n");
+                codigo_asm.append("\tmov rax,0 \t\t; zera contador\n");
                 end_aux = novo_temp(2); // 1 byte a mais p/ quebra de linha
 
                 codigo_asm.append("\tmov al, [M+" + int2hex(end_Exp) + "] \t\t; carrega char no registrador temporario\n");
                 codigo_asm.append("\tmov [qword M+" +int2hex(end_aux) + "], al\t\t; novo_temp recebe o char\n");
-                codigo_asm.append("\tmov edx,1 \t\t; cont:=1 byte\n");
+                codigo_asm.append("\tmov rax,1 \t\t; cont:=1 byte\n");
 
                 if(writeln){
                     codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
-                    codigo_asm.append("\tadd rsi, edx \t\t; soma contador ao inicio\n");
+                    codigo_asm.append("\tadd rsi, rax \t\t; soma contador ao inicio\n");
                     codigo_asm.append("\tmov al, 0xA \t\t; reg. al recebe quebra de linha\n");
                     codigo_asm.append("\tmov [rsi], al \t\t; quebra de linha no final do char\n");
-                    codigo_asm.append("\tadd edx, 1 \t\t; contador++ p/ n dar pau com a quebra de linha\n");
+                    codigo_asm.append("\tadd rax, 1 \t\t; contador++ p/ n dar pau com a quebra de linha\n");
                 }
 
-                codigo_asm.append(";executa interrupção de saída\n");
+                codigo_asm.append(";executa interrupção de saída\n\n");
 
                 codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
-                codigo_asm.append("\tmov rdx, edx\t\t; tamanho do booleano\n");
+                codigo_asm.append("\tmov rdx, rax\t\t; tamanho do booleano\n");
                 codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
                 codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
                 codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
             }
             // escreve string
             else{
-                codigo_asm.append("\tmov edx,0 \t\t; zera contador\n");
+                codigo_asm.append("\tmov rcx,0 \t\t; zera contador\n");
                 end_aux = novo_temp(tamanho_Exp+1); // 1 byte a mais p/ quebra de linha
 
                 codigo_asm.append("\tmov rax, qword M+" + int2hex(end_Exp) + "\t\t; rax recebe endereco de Exp\n");
@@ -2186,22 +2256,22 @@ void Comandos(){
                 string next_char = novo_rotulo();
                 codigo_asm.append("\tmov al, [rax] \t\t; guarda o char atual da string\n");
                 codigo_asm.append("\tmov [rbx], al \t\t; salva esse char no temp\n");
-                codigo_asm.append("\tadd edx,1 \t\t; contador++\n");
+                codigo_asm.append("\tadd rcx,1 \t\t; contador++\n");
                 codigo_asm.append("\tadd rax, 1 \t\t; proximo char (Exp)\n");
                 codigo_asm.append("\tadd rbx, 1 \t\t; proximo char (temp)\n");
                 codigo_asm.append("\tcmp al,0 \t\t; checa se eh fim da str\n");
                 codigo_asm.append("\tjne " + next_char + "\t\t; se não eh o fim, continua o loop (jump p/ next_char)\n");
-                codigo_asm.append("\tsub edx,1 \t\t; contador-- (remove o fim da str)\n");
+                codigo_asm.append("\tsub rcx,1 \t\t; contador-- (remove o fim da str)\n");
 
                 if(writeln){
                     codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
-                    codigo_asm.append("\tadd rsi, edx \t\t; soma contador ao inicio\n");
+                    codigo_asm.append("\tadd rsi, rcx \t\t; soma contador ao inicio\n");
                     codigo_asm.append("\tmov al, 0xA \t\t; reg. al recebe quebra de linha\n");
                     codigo_asm.append("\tmov [rsi], al \t\t; quebra de linha no final do char\n");
-                    codigo_asm.append("\tadd edx, 1 \t\t; contador++ p/ n dar pau com a quebra de linha\n");
+                    codigo_asm.append("\tadd rcx, 1 \t\t; contador++ p/ n dar pau com a quebra de linha\n");
                 }
 
-                codigo_asm.append(";executa interrupção de saída\n");
+                codigo_asm.append(";executa interrupção de saída\n\n");
                 
                 codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
                 codigo_asm.append("\tmov rdx, edx\t\t; tamanho da str\n");
