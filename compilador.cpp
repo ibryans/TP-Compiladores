@@ -12,6 +12,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <sstream>
+#include <fstream>
 
 using namespace std;
 
@@ -88,10 +89,31 @@ struct Simbolo {
     int endereco;
 };
 
-// String gigante com todo o codigo em assembly gerado
+// string gigante com todo o codigo em assembly gerado
 string codigo_asm;
 
-// Contadores de rotulos, dados e temporarios
+void inicializa_asm(){
+    codigo_asm.append("\nsection .data\t\t; Seção de dados\n");
+    codigo_asm.append("M:\t\t\t; Rótulo que marca o início da seção de dados\n");
+    codigo_asm.append("resb 10000h\t\t\t; Reserva de temporários\n");
+    codigo_asm.append("section .text\t\t; Seção de código\n");
+    codigo_asm.append("global _start\t\t; Ponto inicial do programa\n");
+    codigo_asm.append("_start\t\t\t; Início do programa\n");
+}
+
+void finaliza_asm(){
+    codigo_asm.append("\n; Halt\n");
+    codigo_asm.append("mov rax, 60 \t\t; Chamada de saída\n");
+    codigo_asm.append("mov rdi, 0 \t\t\t; Código de saída sem erros\n");
+    codigo_asm.append("syscall \t\t\t; Chama o kernel\n");
+
+    // faz arquivo .asm
+    ofstream arquivo_asm("codigo.asm");
+    arquivo_asm << codigo_asm;
+    arquivo_asm.close();
+}
+
+// contadores de rotulos, dados e temporarios
 int rotulo = 1;
 int cont_dados = 65536; // 10000h em decimal
 int cont_temps = 0;
@@ -117,8 +139,9 @@ int novo_temp(int num_bytes){
 }
 
 string int2hex(int number){
-    std::ostringstream ss;
-    ss << "0x" << std::hex << number;
+    ostringstream ss;
+    ss << "0x" << hex << number;
+
     return ss.str();
 }
 
@@ -1048,7 +1071,7 @@ void Dec() {
 
             codigo_asm.append("\nsection .text \t\t; voltando p/ seção de código\n");
             int end_float = novo_dado(4);
-            codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_float) + "] \t\t; carrega a constante em xmm0\n");
+            codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_float) + "] \t\t; carrega a constante em xmm0\n");
             codigo_asm.append("\tmovss [qword M+" + int2hex(simb_id.endereco) + "],xmm0 \t\t; id recebe o valor da constante\n");
         }
         // id char
@@ -1066,14 +1089,14 @@ void Dec() {
             simb_id.tamanho = rl_const.tamanho;
             tab_simbolos.update(lex_id, simb_id); // atualiza TS
 
-            codigo_asm.append("\tmov rdi,qword M+" + int2hex(end_str) + "\t\t; carrega endereco da constante em rdi\n");
-            codigo_asm.append("\tmov rsi,qword M+" + int2hex(simb_id.endereco) + "\t\t; carrega endereco de id em rsi\n");
+            codigo_asm.append("\tmov rax,qword M+" + int2hex(end_str) + "\t\t; carrega endereco da constante em rax\n");
+            codigo_asm.append("\tmov rbx,qword M+" + int2hex(simb_id.endereco) + "\t\t; carrega endereco de id em rbx\n");
             string next_char = novo_rotulo();
             codigo_asm.append(next_char + ": \t\t; rotulo p/ ler proximo char da str\n");
-            codigo_asm.append("\tmov al,[rdi] \t\t; guarda o char atual da constante\n");
-            codigo_asm.append("\tmov [rsi],al \t\t; carrega esse char em id\n");
-            codigo_asm.append("\tadd rdi,1 \t\t; proximo char da constante\n");
-            codigo_asm.append("\tadd rsi,1 \t\t; proximo char de id\n");
+            codigo_asm.append("\tmov al, [rax] \t\t; guarda o char atual da constante\n");
+            codigo_asm.append("\tmov [rbx],al \t\t; carrega esse char em id\n");
+            codigo_asm.append("\tadd rax, 1 \t\t; avanca p/ proximo char da constante\n");
+            codigo_asm.append("\tadd rbx, 1 \t\t; avanca p/ proximo char de id\n");
             codigo_asm.append("\tcmp al,0 \t\t; checa se eh fim da str\n");
             codigo_asm.append("\tjne " + next_char + "\t\t; se nao eh fim, continua o loop\n");
         }
@@ -1172,7 +1195,7 @@ void Dec() {
                     } else codigo_asm.append("\tdd " + rl_const.lexema + " \t\t; reserva 4 bytes e escreve a constante\n");
                     codigo_asm.append("\nsection .text \t\t; voltando p/ seção de código\n");
                     int end_float = novo_dado(4);
-                    codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_float) + "] \t\t; carrega a constante em xmm0\n");
+                    codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_float) + "] \t\t; carrega a constante em xmm0\n");
                     codigo_asm.append("\tmovss [qword M+" + int2hex(simb_id.endereco) + "],xmm0 \t\t; id recebe o valor da constante\n");
                 }
                 // id char
@@ -1190,14 +1213,14 @@ void Dec() {
                     simb_id.tamanho = rl_const.tamanho;
                     tab_simbolos.update(lex_id, simb_id); // atualiza TS
 
-                    codigo_asm.append("\tmov rdi,qword M+" + int2hex(end_str) + "\t\t; carrega endereco da constante em rdi\n");
-                    codigo_asm.append("\tmov rsi,qword M+" + int2hex(simb_id.endereco) + "\t\t; carrega endereco de id em rsi\n");
+                    codigo_asm.append("\tmov rax,qword M+" + int2hex(end_str) + "\t\t; carrega endereco da constante em rax\n");
+                    codigo_asm.append("\tmov rbx,qword M+" + int2hex(simb_id.endereco) + "\t\t; carrega endereco de id em rbx\n");
                     string next_char = novo_rotulo();
                     codigo_asm.append(next_char + ": \t\t; rotulo p/ ler proximo char da str\n");
-                    codigo_asm.append("\tmov al,[rdi] \t\t; guarda o char atual da constante\n");
-                    codigo_asm.append("\tmov [rsi],al \t\t; carrega esse char em id\n");
-                    codigo_asm.append("\tadd rdi,1 \t\t; proximo char da constante\n");
-                    codigo_asm.append("\tadd rsi,1 \t\t; proximo char de id\n");
+                    codigo_asm.append("\tmov al, [rax] \t\t; guarda o char atual da constante\n");
+                    codigo_asm.append("\tmov [rbx],al \t\t; carrega esse char em id\n");
+                    codigo_asm.append("\tadd rax, 1 \t\t; avanca p/ proximo char da constante\n");
+                    codigo_asm.append("\tadd rbx, 1 \t\t; avanca p/ proximo char de id\n");
                     codigo_asm.append("\tcmp al,0 \t\t; checa se eh fim da str\n");
                     codigo_asm.append("\tjne " + next_char + "\t\t; se nao eh fim, continua o loop\n");
                 }
@@ -1331,7 +1354,7 @@ void Comandos(){
                 showError(INCOMPATIBLE_TYPES, "");
             }
 
-            codigo_asm.append("\tmov eax,[qword M+" +int2hex(end_Exp) + "]\t\t; carrega [Exp.end] em eax\n");
+            codigo_asm.append("\tmov eax, [qword M+" +int2hex(end_Exp) + "]\t\t; carrega [Exp.end] em eax\n");
             codigo_asm.append("\tcmp eax,1 \t\t; faz o teste\n");
             codigo_asm.append("\tjne " + rot_falso + "\t\t; se teste deu falso, jump p/ rot_falso\n");
             
@@ -1391,7 +1414,7 @@ void Comandos(){
                 showError(INCOMPATIBLE_TYPES, "");
             } 
 
-            codigo_asm.append("\tmov eax,[qword M+" +int2hex(end_Exp) + "]\t\t; carrega [Exp.end] em eax\n");
+            codigo_asm.append("\tmov eax, [qword M+" +int2hex(end_Exp) + "]\t\t; carrega [Exp.end] em eax\n");
             codigo_asm.append("\tcmp eax,1 \t\t; faz o teste\n");
             codigo_asm.append("\tjne " + rot_fim+ "\t\t; se teste deu falso, jump p/ rot_fim\n");
 
@@ -1460,7 +1483,7 @@ void Comandos(){
                 casaToken(TK_fechaColchete);
 
                 posicao_string = novo_temp(4);
-                codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_Exp) + "] \t\t; carrega a posicao da string em eax\n");
+                codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega a posicao da string em eax\n");
                 codigo_asm.append("\tmov [qword M+" + int2hex(posicao_string) + "],eax \t\t; carrega eax em um temporario\n");
             }
 
@@ -1500,25 +1523,25 @@ void Comandos(){
             // id:=Exp
             // id inteiro, Exp inteiro
             if (simb_id.tipo == tipo_inteiro){
-                codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em eax\n");
+                codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em eax\n");
                 codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "],eax \t\t; carrega id.end com Exp.end\n");
             }
             // id char, Exp char
             else if (simb_id.tipo == tipo_caractere){
-                codigo_asm.append("\tmov al,[qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em al\n");
+                codigo_asm.append("\tmov al, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em al\n");
                 codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "],al \t\t; carrega id.end com Exp.end\n");
             }
             // id float
             else if (simb_id.tipo == tipo_float){
                 // id float, Exp inteiro
                 if (tipo_Exp == tipo_inteiro){
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm0,eax \t\t; converte p/ float e guarda em xmm0\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm0, eax \t\t; converte p/ float e guarda em xmm0\n");
                     codigo_asm.append("\tmovss [qword M+" + int2hex(simb_id.endereco) + "],xmm0 \t\t; carrega id.end com Exp.end\n");
                 }
                 // id float, Exp float
                 else{
-                    codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em xmm0\n");
+                    codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em xmm0\n");
                     codigo_asm.append("\tmovss [qword M+" + int2hex(simb_id.endereco) + "],xmm0 \t\t; carrega id.end com Exp.end\n");
                 }
             }
@@ -1526,23 +1549,23 @@ void Comandos(){
             else{
                 // id string, recebe um char na posicao Exp
                 if(is_char_array){
-                    codigo_asm.append("\tmov rdi,qword M+" + int2hex(simb_id.endereco) + " \t\t; carrega [id.end] (inicio da string) em rdi\n");
-                    codigo_asm.append("\tmov rax,0 \t\t; rax:=0\n");
-                    codigo_asm.append("\tmov rax,[qword M+" + int2hex(posicao_string) + "] \t\t; rax recebe posicao do char\n");
-                    codigo_asm.append("\tadd rdi,rax \t\t; soma inicio da string com posicao do char\n");
-                    codigo_asm.append("\tmov al,[qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em al\n");
-                    codigo_asm.append("\tmov [rdi],al \t\t; salva [Exp.end] em id[pos]\n");  
+                    codigo_asm.append("\tmov rax,qword M+" + int2hex(simb_id.endereco) + " \t\t; carrega [id.end] (inicio da string) em rax\n");
+                    codigo_asm.append("\tmov rbx,0 \t\t; rbx:=0\n");
+                    codigo_asm.append("\tmov rbx, [qword M+" + int2hex(posicao_string) + "] \t\t; rbx recebe posicao do char\n");
+                    codigo_asm.append("\tadd rax,rbx \t\t; soma inicio da string com posicao do char\n");
+                    codigo_asm.append("\tmov al, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em al\n");
+                    codigo_asm.append("\tmov [rax],al \t\t; salva [Exp.end] em id[pos]\n");  
                 }
                 // id string, Exp string
                 else{
-                    codigo_asm.append("\tmov rdi,qword M+" + int2hex(end_Exp) + "\t\t; carrega endereco de Exp em rdi\n");
-                    codigo_asm.append("\tmov rsi,qword M+" + int2hex(simb_id.endereco) + "\t\t; carrega endereco de id em rsi\n");
+                    codigo_asm.append("\tmov rax,qword M+" + int2hex(end_Exp) + "\t\t; carrega endereco de Exp em rax\n");
+                    codigo_asm.append("\tmov rbx,qword M+" + int2hex(simb_id.endereco) + "\t\t; carrega endereco de id em rbx\n");
                     string next_char = novo_rotulo();
                     codigo_asm.append(next_char + ": \t\t; rotulo p/ ler proximo char da str\n");
-                    codigo_asm.append("\tmov al,[rdi] \t\t; guarda o char atual de Exp\n");
-                    codigo_asm.append("\tmov [rsi],al \t\t; carrega esse char em id\n");
-                    codigo_asm.append("\tadd rdi,1 \t\t; proximo char de Exp\n");
-                    codigo_asm.append("\tadd rsi,1 \t\t; proximo char de id\n");
+                    codigo_asm.append("\tmov al, [rax] \t\t; guarda o char atual de Exp\n");
+                    codigo_asm.append("\tmov [rbx],al \t\t; carrega esse char em id\n");
+                    codigo_asm.append("\tadd rax, 1 \t\t; avanca p/ proximo char de Exp\n");
+                    codigo_asm.append("\tadd rbx, 1 \t\t; avanca p/ proximo char de id\n");
                     codigo_asm.append("\tcmp al,0 \t\t; checa se eh fim da str\n");
                     codigo_asm.append("\tjne " + next_char + "\t\t; se nao eh fim, continua o loop\n");
 
@@ -1555,6 +1578,8 @@ void Comandos(){
         
         // readln "(" id ")"
         else if(registroLexico.token == TK_readln){
+            int end_aux;
+            
             casaToken(TK_readln);
             casaToken(TK_abreParentese);
             lex_id = registroLexico.lexema; // guarda lexema do identificador p/ a busca na TS
@@ -1571,18 +1596,168 @@ void Comandos(){
                 showError(INCOMPATIBLE_CLASSES, lex_id);
             }
 
-            casaToken(TK_fechaParentese);  
+            casaToken(TK_fechaParentese);
+
+            /* GERAÇÃO DE CÓDIGO */
+            cont_temps = 0; // limpa area de temporarios
+            end_aux = novo_temp(256); // tamanho maximo pois pode ser string
+            codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; endereco do buffer\n");
+            codigo_asm.append("\tmov rdx, 100h \t\t; tamanho do buffer\n");
+            codigo_asm.append("\tmov rax, 0 \t\t; chamada para leitura\n");
+            codigo_asm.append("\tmov rdi, 0 \t\t; leitura do teclado\n");
+            codigo_asm.append("\tsyscall \t\t\n");
+            
+            // ler valor inteiro
+            if(simb_id.tipo == tipo_inteiro){
+                codigo_asm.append("\tmov eax, 0 \t\t; acumulador:=0\n");
+                codigo_asm.append("\tmov ebx, 0 \t\t; caractere\n");
+                codigo_asm.append("\tmov ecx, 10 \t\t; base 10\n");
+                codigo_asm.append("\tmov dx, 1 \t\t; sinal\n");
+                codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; endereco do buffer\n");
+                codigo_asm.append("\tmov bl, [rsi] \t\t; carrega caractere\n");
+                codigo_asm.append("\tcmp bl, '-' \t\t; sinal - ?\n");
+                string R0 = novo_rotulo();
+                codigo_asm.append("\tjne " + R0 + " \t\t; se dif -, salta\n");
+                codigo_asm.append("\tmov dx, -1 \t\t; senão, armazena -\n");
+                codigo_asm.append("\tadd rsi, 1 \t\t; inc. ponteiro string\n");
+                codigo_asm.append("\tmov bl, [rsi] \t\t; carrega caractere\n\n");
+
+                codigo_asm.append(R0 + ": \t\t; R0\n");
+                codigo_asm.append("\tpush dx \t\t; empilha sinal\n");
+                codigo_asm.append("\tmov edx, 0 \t\t; reg. multiplicação\n\n");
+
+                string R1 = novo_rotulo();
+                codigo_asm.append(R1 + ": \t\t; R1\n");
+                codigo_asm.append("\tcmp bl, 0Ah \t\t; verifica fim string\n");
+                string R2 = novo_rotulo();
+                codigo_asm.append("\tje " + R2 + " \t\t; salta se fim string\n");
+                codigo_asm.append("\timul ecx \t\t; mult. eax por 10\n");
+                codigo_asm.append("\tsub bl, '0' \t\t; converte caractere\n");
+                codigo_asm.append("\tadd eax, ebx \t\t; soma valor caractere\n");
+                codigo_asm.append("\tadd rsi, 1 \t\t; incrementa base\n");
+                codigo_asm.append("\tmov bl, [rsi] \t\t; carrega caractere\n");
+                codigo_asm.append("\tjmp " + R1 + " \t\t; loop\n\n");
+
+                codigo_asm.append(R2 + ": \t\t; R2\n");
+                codigo_asm.append("\tpop cx \t\t; desempilha sinal\n");
+                codigo_asm.append("\tcmp cx, 0\t\t; verifica sinal\n");
+                string R3 = novo_rotulo();
+                codigo_asm.append("\tjg " + R3 + " \t\t\n");
+                codigo_asm.append("\tneg eax \t\t; mult. sinal\n\n");
+
+                codigo_asm.append(R3 + ": \t\t; R3\n");
+
+                codigo_asm.append("\tmov [qword M+" +int2hex(simb_id.endereco) + "], eax\t\t; id recebe o novo int\n");
+            }
+            // ler valor real
+            else if (simb_id.tipo == tipo_float){
+                codigo_asm.append("\tmov rax, 0 \t\t; acumul. parte int.\n");
+                codigo_asm.append("\tsubss xmm0,xmm0 \t\t; acumul. parte frac.\n");
+                codigo_asm.append("\tmov rbx, 0 \t\t; caractere\n");
+                codigo_asm.append("\tmov rcx, 10 \t\t; base 10\n");
+                codigo_asm.append("\tcvtsi2ss xmm3,rcx \t\t; base 10\n");
+                codigo_asm.append("\tmovss xmm2,xmm3 \t\t;potência de 10\n");
+                codigo_asm.append("\tmov rdx, 1 \t\t;sinal\n");     
+                codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t;end. buffer\n");
+                codigo_asm.append("\tmov bl, [rsi] \t\t;carrega caractere\n");
+                codigo_asm.append("\tcmp bl, '-' \t\t;sinal - ?\n");
+                string R0 = novo_rotulo();
+                codigo_asm.append("\tjne " + R0 + " \t\t;se dif -, salta\n");
+                codigo_asm.append("\tmov rdx, -1 \t\t;senao, armazena -\n");
+                codigo_asm.append("\tadd rsi, 1 \t\t;inc. ponteiro stringcarrega caractere\n");
+                codigo_asm.append("\tmov bl, [rsi] \t\t;carrega caractere\n");
+
+                
+                codigo_asm.append(R0 + ": \t\t; R0\n");
+                codigo_asm.append("\tpush rdx \t\t;empilha sinal\n");
+                codigo_asm.append("\tmov rdx, 0 \t\t;reg. multiplicação\n");
+                
+                string R1 = novo_rotulo();
+                string R2 = novo_rotulo();
+                string R3 = novo_rotulo();
+                codigo_asm.append(R1 + ": \t\t; R1\n");
+                codigo_asm.append("\tcmp bl, 0Ah \t\t;verifica fim string\n");
+                codigo_asm.append("\tje " + R2 + " \t\t;salta se fim string\n");
+                codigo_asm.append("\tcmp bl, '.' \t\t;verifica ponto\n");
+                codigo_asm.append("\tje " + R3 + " \t\t;salta se salta se ponto\n");
+                codigo_asm.append("\timul ecx \t\t;mult. eax por 10\n");
+                codigo_asm.append("\tsub bl, '0' \t\t;converte caractere\n");
+                codigo_asm.append("\tadd eax, ebx \t\t;soma valor caractere\n");
+                codigo_asm.append("\tadd rsi, 1 \t\t;incrementa base\n");
+                codigo_asm.append("\tmov bl, [rsi] \t\t;carrega caractere\n");
+                codigo_asm.append("\tjmp " + R1 + " \t\t;loop\n");
+
+                codigo_asm.append(R3 + ": \t\t; R3\n");
+                codigo_asm.append("\t\t; calcula parte fracion'aria em xmm0\n");
+
+                codigo_asm.append("\tadd rsi, 1 \t\t; inc. ponteiro string\n");
+                codigo_asm.append("\tmov bl, [rsi] \t\t ; carrega caractere\n");
+                codigo_asm.append("\tcmp bl, 0Ah \t\t; verifica fim string\n");
+                codigo_asm.append("\tje " + R2 + " \t\t;salta se fim string\n");
+                codigo_asm.append("\tsub bl, '0' \t\t; converte caractere\n");
+                codigo_asm.append("\tcvtsi2ss xmm1, rbx \t\t;conv real\n");
+                codigo_asm.append("\tdivss xmm1, xmm2 \t\t; transf casa decimal\n");
+                codigo_asm.append("\taddss xmm0, xmm1 \t\t; soma acumul\n");
+                codigo_asm.append("\tmulss xmm2,xmm3 \t\t; atualiza potencia\n");
+                codigo_asm.append("\tjmp " + R3 + " \t\t;loop\n");
+                
+                codigo_asm.append(R2 + ": \t\t; R2\n");
+                codigo_asm.append("\tcvtsi2ss xmm1, rax \t\t; conv parte inteira\n");
+                codigo_asm.append("\taddss xmm0, xmm1\t\t; soma parte frac.\n");     
+                codigo_asm.append("\tpop rcx \t\t; desempilha sinal\n");
+                codigo_asm.append("\tcvtsi2ss xmm1, rcx\t\t; conv sinal\n");
+                codigo_asm.append("\tmulss xmm0, xmm1 \t\t; mult. sinal\n");        
+
+                codigo_asm.append("\tmovss [qword M+" +int2hex(simb_id.endereco) + "], xmm0\t\t; id recebe o novo float\n");
+            }
+            // ler valor do tipo caractere
+            else if(simb_id.tipo == tipo_caractere){
+                codigo_asm.append("\tmov al, [M+" + int2hex(end_aux) + "] \t\t; carrega char no registrador temporario\n");
+                codigo_asm.append("\tmov [qword M+" +int2hex(simb_id.endereco) + "], al\t\t; id recebe o novo char\n");
+            }
+            // ler valor tipo boolean
+            else if(simb_id.tipo == tipo_boolean){
+                codigo_asm.append("\tmov al, [M+" + int2hex(end_aux) + "] \t\t; carrega booleano no registrador temporario\n");
+                codigo_asm.append("\tmov [qword M+" +int2hex(simb_id.endereco) + "], al\t\t; id recebe o novo booleano\n");
+            }
+            // ler valor tipo string
+            else {
+                codigo_asm.append("\tmov rax, qword M+" + int2hex(end_aux) + "\t\t; rax recebe endereco do novo_temp\n");
+                codigo_asm.append("\tmov rbx, qword M+" + int2hex(simb_id.endereco) + "\t\t; rbx recebe endereco de id\n");
+                string next_char = novo_rotulo();
+                codigo_asm.append(next_char + ": \t\t; rotulo p/ ler proximo char da str\n");
+                codigo_asm.append("\tmov al, [rax] \t\t; guarda o char atual da string lida\n");
+                codigo_asm.append("\tmov [rbx], al \t\t; salva esse char no id\n");
+                codigo_asm.append("\tadd rax, 1 \t\t; proximo char (string lida)\n");
+                codigo_asm.append("\tadd rbx, 1 \t\t; proximo char (id)\n");
+                codigo_asm.append("\tcmp al, 0Ah \t\t; checa pelo 'Enter' (quebra de linha = fim da string)\n");
+                codigo_asm.append("\tjne " + next_char + "\t\t; se não eh o fim, continua o loop (jump p/ next_char)\n");
+                
+                // leu string toda
+                codigo_asm.append("\tsub rbx, 1 \t\t; retira ultimo byte lido da str (quebra de linha)\n");
+                codigo_asm.append("\tmov bl, 0 \t\t; carrega delimitador de fim de string (0) em bl\n");
+                codigo_asm.append("\tmov [rbx], bl \t\t; carrega bl no fim da string (troca quebra de linha pelo 0)\n");
+
+                simb_id.tamanho = 255; // maior tamanho permitido (0 no fim da string)
+                tab_simbolos.update(lex_id, simb_id);
+            }
+
         } // fim da producao de leitura
         
         // (write | writeln) "(" Exp {, Exp} ")"
         else if(registroLexico.token == TK_write || registroLexico.token == TK_writeln){
+            int end_aux;
+            bool writeln = false;
+
             if(registroLexico.token == TK_write){
                 casaToken(TK_write);
             }
             else{
                 casaToken(TK_writeln);
+                writeln = true;
             }
             casaToken(TK_abreParentese);
+            cont_temps = 0; // limpa area de temporarios
             Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
 
             // o tipo nao pode ser logico
@@ -1592,16 +1767,449 @@ void Comandos(){
 
             while(registroLexico.token == TK_virgula){
                 casaToken(TK_virgula);
+                // escrever valor inteiro
+                if(tipo_Exp == tipo_inteiro){
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_Exp) + "] \t\t; inteiro a ser convertido\n");
+                    end_aux = novo_temp(256);
+                    codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t;end. string ou temp\n");
+                    codigo_asm.append("\tmov rcx, 0 \t\t;contador pilha\n");
+                    codigo_asm.append("\tmov rdi, 0 \t\t;tam. string convertido\n");
+                    codigo_asm.append("\tcmp eax, 0 \t\t;verifica sinal\n");
+                    string R0 = novo_rotulo();
+                    codigo_asm.append("\tjge " + R0 + "\t\t;salta se número positivo\n");
+                    codigo_asm.append("\tmov bl, '-' \t\t;senão, escreve sinal –\n");
+                    codigo_asm.append("\tmov [rsi], bl \t\t\n");
+                    codigo_asm.append("\tadd rsi, 1 \t\t;incrementa índice\n");
+                    codigo_asm.append("\tadd rdi, 1 \t\t;incrementa tamanho\n");
+                    codigo_asm.append("\tneg eax \t\t;toma módulo do número\n");
+
+                    codigo_asm.append(R0 + ": \t\t\n");
+                    codigo_asm.append("\tmov ebx, 10 \t\t;divisor\n");
+
+                    string R1 = novo_rotulo();
+                    codigo_asm.append(R1 + ": \t\t\n");
+                    codigo_asm.append("\tadd rcx, 1 \t\t;incrementa contador\n");
+                    codigo_asm.append("\tcdq \t\t;estende edx:eax p/ div.\n");
+                    codigo_asm.append("\tidiv ebx \t\t;divide edx:eax por ebx\n");
+                    codigo_asm.append("\tpush dx \t\t;empilha valor do resto\n");
+                    codigo_asm.append("\tcmp eax, 0 \t\t;verifica se quoc. é 0\n");
+                    codigo_asm.append("\tjne " + R1 + "\t\t;se não é 0, continua\n");
+                    codigo_asm.append("\tadd rdi, rcx \t\t;atualiza tam. string\n");
+                    
+                    codigo_asm.append(";agora, desemp. os valores e escreve o string\n");
+
+                    string R2 = novo_rotulo();
+                    codigo_asm.append(R2 + ": \t\t\n");
+                    codigo_asm.append("\tpop dx \t\t;desempilha valor\n");
+                    codigo_asm.append("\tadd dl, '0' \t\t;transforma em caractere\n");
+                    codigo_asm.append("\tmov [rsi], dl \t\t;escreve caractere\n");
+                    codigo_asm.append("\tadd rsi, 1 \t\t;incrementa base\n");
+                    codigo_asm.append("\tsub rcx, 1 \t\t;decrementa contador\n");
+                    codigo_asm.append("\tcmp rcx, 0 \t\t;verifica pilha vazia\n");
+                    codigo_asm.append("\tjne " + R2 + "\t\t;se não pilha vazia, loop\n");
+                    
+
+                    codigo_asm.append(";executa interrupção de saída\n");
+
+                    codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
+                    codigo_asm.append("\tmov rdx, rdi\t\t; tamanho da string\n");
+                    codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
+                    codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
+                    codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
+                }
+                // escrever valor real
+                else if(tipo_Exp == tipo_float){
+                    codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_Exp) + "] \t\t; real a ser convertido\n");
+                    end_aux = novo_temp(256);
+                    codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t;end. temporário\n");
+                    codigo_asm.append("\tmov rcx, 0 \t\t;contador pilha\n");
+                    codigo_asm.append("\tmov rdi, 6 \t\t;precisao 6 casas compart\n");
+                    codigo_asm.append("\tmov rbx, 10 \t\t;divisor\n");
+                    codigo_asm.append("\tcvtsi2ss xmm2, rbx \t\t;divisor real\n");
+                    codigo_asm.append("\tsubss xmm1, xmm1 \t\t;zera registrador\n");
+                    codigo_asm.append("\tcomiss xmm0, xmm1 \t\t;verifica sinal\n");
+                    string R0 = novo_rotulo();
+                    codigo_asm.append("\tjae " + R0 + "\t\t;salta se número positivo\n");
+                    codigo_asm.append("\tmov dl, '-' \t\t;senão, escreve sinal –\n");
+                    codigo_asm.append("\tmov [rsi], dl \t\t\n");
+                    codigo_asm.append("\tmov rdx, -1 \t\t;Carrega -1 em RDX\n");
+                    codigo_asm.append("\tcvtsi2ss xmm1, rdx \t\t;Converte para real\n");
+                    codigo_asm.append("\tmulss xmm0, xmm1 \t\t;Toma módulo\n");
+                    codigo_asm.append("\tadd rsi, 1 \t\t;incrementa índice\n");
+
+                    codigo_asm.append(R0 + ": \t\t\n");
+                    codigo_asm.append("\troundss xmm1, xmm0, 0b0011 \t\t;parte inteira xmm1\n");
+                    codigo_asm.append("\tsubss xmm0, xmm1 \t\t;parte frac xmm0\n");
+                    codigo_asm.append("\tcvtss2si rax, xmm1 \t\t;convertido para int\n");
+
+                    codigo_asm.append(";converte parte inteira que está em rax\n");
+
+                    string R1 = novo_rotulo();
+                    codigo_asm.append(R1 + ": \t\t\n");
+                    codigo_asm.append("\tadd rcx, 1 \t\t;incrementa contador\n");
+                    codigo_asm.append("\tcdq \t\t;estende edx:eax p/ div.\n");
+                    codigo_asm.append("\tidiv ebx \t\t;divide edx:eax por ebx\n");
+                    codigo_asm.append("\tpush dx \t\t;empilha valor do resto\n");
+                    codigo_asm.append("\tcmp eax, 0 \t\t;verifica se quoc. é 0\n");
+                    codigo_asm.append("\tjne " + R1 + "\t\t;se não é 0, continua\n");
+                    codigo_asm.append("\tsub rdi, rcx \t\t;decrementa precisao\n");
+
+                    codigo_asm.append(";agora, desemp valores e escreve parte int\n");
+
+                    string R2 = novo_rotulo();
+                    codigo_asm.append(R2 + ": \t\t\n");
+                    codigo_asm.append("\tpop dx \t\t;desempilha valor\n");
+                    codigo_asm.append("\tadd dl, '0' \t\t;transforma em caractere\n");
+                    codigo_asm.append("\tmov [rsi], dl \t\t;escreve caractere\n");
+                    codigo_asm.append("\tadd rsi, 1 \t\t;incrementa base\n");
+                    codigo_asm.append("\tsub rcx, 1 \t\t;decrementa contador\n");
+                    codigo_asm.append("\tcmp rcx, 0 \t\t;verifica pilha vazia\n");
+                    codigo_asm.append("\tjne " + R2 + "\t\t;se não pilha vazia, loop\n");
+
+                    codigo_asm.append("\tmov dl, '.' \t\t;escreve ponto decimal\n");
+                    codigo_asm.append("\tmov [rsi], dl \t\t;escreve ponto decimal\n");
+                    codigo_asm.append("\tadd rsi, 1 \t\t;incrementa base\n");
+
+                    codigo_asm.append(";converte parte fracionaria que está em xmm0\n");
+
+                    string R3 = novo_rotulo();
+                    string R4 = novo_rotulo();
+                    codigo_asm.append(R3 + ": \t\t\n");
+                    codigo_asm.append("\tcmp rdi, 0 \t\t;verifica precisao\n");
+                    codigo_asm.append("\tjle " + R4 + " \t\t; terminou precisao ?\n");
+                    codigo_asm.append("\tmulss xmm0,xmm2 \t\t;desloca para esquerda\n");
+                    codigo_asm.append("\troundss xmm1,xmm0,0b0011 \t\t;parte inteira xmm1\n");
+                    codigo_asm.append("\tsubss xmm0,xmm1 \t\t;atualiza xmm0\n");
+                    codigo_asm.append("\tcvtss2si rdx, xmm1 \t\t;convertido para int\n");
+                    codigo_asm.append("\tadd dl, '0' \t\t;transforma em caractere\n");
+                    codigo_asm.append("\tmov [rsi], dl \t\t;escreve caractere\n");
+                    codigo_asm.append("\tadd rsi, 1 \t\t;incrementa base\n");
+                    codigo_asm.append("\tsub rdi, 1 \t\t;decrementa precisao\n");
+                    codigo_asm.append("\tjmp " + R3 + "\t\t;loop\n");
+
+                    codigo_asm.append("; impressão\n");
+                    codigo_asm.append(R4 + ": \t\t\n");
+
+                    codigo_asm.append("\tmov rdx, rsi \t\t;calc tam str convertido\n");
+                    codigo_asm.append("\tmov rbx, M+" + int2hex(end_aux) + "\t\t;end. string ou temp\n");
+                    codigo_asm.append("\tsub rdx, rbx \t\t;tam=rsi-M-buffer.end\n");
+                    
+
+                    codigo_asm.append(";executa interrupção de saída\n");
+
+                    codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
+                    codigo_asm.append("\t\t\t; tamanho da string ja está em rdx\n");
+                    codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
+                    codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
+                    codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
+                }
+                // escreve char
+                else if (tipo_Exp = tipo_caractere){
+                    codigo_asm.append("\tmov edx,0 \t\t; zera contador\n");
+                    end_aux = novo_temp(2); // 1 byte a mais p/ quebra de linha
+
+                    codigo_asm.append("\tmov al, [M+" + int2hex(end_Exp) + "] \t\t; carrega char no registrador temporario\n");
+                    codigo_asm.append("\tmov [qword M+" +int2hex(end_aux) + "], al\t\t; novo_temp recebe o char\n");
+                    codigo_asm.append("\tmov edx,1 \t\t; cont:=1 byte\n");
+
+                    
+                    codigo_asm.append(";executa interrupção de saída\n");
+                    
+                    codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
+                    codigo_asm.append("\tmov rdx, edx\t\t; tamanho do char\n");
+                    codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
+                    codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
+                    codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
+                }
+                // escreve boolean
+                else if(tipo_Exp = tipo_boolean){
+                    codigo_asm.append("\tmov edx,0 \t\t; zera contador\n");
+                    end_aux = novo_temp(2); // 1 byte a mais p/ quebra de linha
+
+                    codigo_asm.append("\tmov al, [M+" + int2hex(end_Exp) + "] \t\t; carrega char no registrador temporario\n");
+                    codigo_asm.append("\tmov [qword M+" +int2hex(end_aux) + "], al\t\t; novo_temp recebe o char\n");
+                    codigo_asm.append("\tmov edx,1 \t\t; cont:=1 byte\n");
+
+
+                    codigo_asm.append(";executa interrupção de saída\n");
+
+                    codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
+                    codigo_asm.append("\tmov rdx, edx\t\t; tamanho do booleano\n");
+                    codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
+                    codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
+                    codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
+                }
+                // escreve string
+                else{
+                    codigo_asm.append("\tmov edx,0 \t\t; zera contador\n");
+                    end_aux = novo_temp(tamanho_Exp+1); // 1 byte a mais p/ quebra de linha
+
+                    codigo_asm.append("\tmov rax, qword M+" + int2hex(end_Exp) + "\t\t; rax recebe endereco de Exp\n");
+                    codigo_asm.append("\tmov rbx, qword M+" + int2hex(end_aux) + "\t\t; rbx recebe endereco de novo_temp\n");
+                    string next_char = novo_rotulo();
+                    codigo_asm.append("\tmov al, [rax] \t\t; guarda o char atual da string\n");
+                    codigo_asm.append("\tmov [rbx], al \t\t; salva esse char no temp\n");
+                    codigo_asm.append("\tadd edx,1 \t\t; contador++\n");
+                    codigo_asm.append("\tadd rax, 1 \t\t; proximo char (Exp)\n");
+                    codigo_asm.append("\tadd rbx, 1 \t\t; proximo char (temp)\n");
+                    codigo_asm.append("\tcmp al,0 \t\t; checa se eh fim da str\n");
+                    codigo_asm.append("\tjne " + next_char + "\t\t; se não eh o fim, continua o loop (jump p/ next_char)\n");
+                    codigo_asm.append("\tsub edx,1 \t\t; contador-- (remove o fim da str)\n");
+
+
+                    codigo_asm.append(";executa interrupção de saída\n");
+                    
+                    codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
+                    codigo_asm.append("\tmov rdx, edx\t\t; tamanho da str\n");
+                    codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
+                    codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
+                    codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
+                }
+
+                cont_temps = 0; // limpa area de temporarios
                 Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
 
-                // o tipo nao pode ser logico
+                // Exp nao pode ser logico
                 if (tipo_Exp == tipo_boolean){
                     showError(INCOMPATIBLE_TYPES, "");
                 }
             }// fim while
 
             casaToken(TK_fechaParentese);
-            
+
+            // escrever valor inteiro
+            if(tipo_Exp == tipo_inteiro){
+                codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_Exp) + "] \t\t; inteiro a ser convertido\n");
+                end_aux = novo_temp(256);
+                codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t;end. string ou temp\n");
+                codigo_asm.append("\tmov rcx, 0 \t\t;contador pilha\n");
+                codigo_asm.append("\tmov rdi, 0 \t\t;tam. string convertido\n");
+                codigo_asm.append("\tcmp eax, 0 \t\t;verifica sinal\n");
+                string R0 = novo_rotulo();
+                codigo_asm.append("\tjge " + R0 + "\t\t;salta se número positivo\n");
+                codigo_asm.append("\tmov bl, '-' \t\t;senão, escreve sinal –\n");
+                codigo_asm.append("\tmov [rsi], bl \t\t\n");
+                codigo_asm.append("\tadd rsi, 1 \t\t;incrementa índice\n");
+                codigo_asm.append("\tadd rdi, 1 \t\t;incrementa tamanho\n");
+                codigo_asm.append("\tneg eax \t\t;toma módulo do número\n");
+
+                codigo_asm.append(R0 + ": \t\t\n");
+                codigo_asm.append("\tmov ebx, 10 \t\t;divisor\n");
+
+                string R1 = novo_rotulo();
+                codigo_asm.append(R1 + ": \t\t\n");
+                codigo_asm.append("\tadd rcx, 1 \t\t;incrementa contador\n");
+                codigo_asm.append("\tcdq \t\t;estende edx:eax p/ div.\n");
+                codigo_asm.append("\tidiv ebx \t\t;divide edx:eax por ebx\n");
+                codigo_asm.append("\tpush dx \t\t;empilha valor do resto\n");
+                codigo_asm.append("\tcmp eax, 0 \t\t;verifica se quoc. é 0\n");
+                codigo_asm.append("\tjne " + R1 + "\t\t;se não é 0, continua\n");
+                codigo_asm.append("\tadd rdi, rcx \t\t;atualiza tam. string\n");
+                
+                codigo_asm.append(";agora, desemp. os valores e escreve o string\n");
+
+                string R2 = novo_rotulo();
+                codigo_asm.append(R2 + ": \t\t\n");
+                codigo_asm.append("\tpop dx \t\t;desempilha valor\n");
+                codigo_asm.append("\tadd dl, '0' \t\t;transforma em caractere\n");
+                codigo_asm.append("\tmov [rsi], dl \t\t;escreve caractere\n");
+                codigo_asm.append("\tadd rsi, 1 \t\t;incrementa base\n");
+                codigo_asm.append("\tsub rcx, 1 \t\t;decrementa contador\n");
+                codigo_asm.append("\tcmp rcx, 0 \t\t;verifica pilha vazia\n");
+                codigo_asm.append("\tjne " + R2 + "\t\t;se não pilha vazia, loop\n");
+                
+                // se o comando foi writeln, inserir quebra de linha no str antes de imprimi-lo
+                if(writeln){
+                    codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
+                    codigo_asm.append("\tmov rsi, rdi\t\t; inicio da string += tamanho da string\n");
+                    codigo_asm.append("\tadd rdi, 1\t\t; tamanho da string += 1\n");
+                    codigo_asm.append("\tmov al, 0xA\t\t; reg. al recebe a quebre de linha\n");
+                    codigo_asm.append("\tmov [rsi], al\t\t; ultima posicao ([rsi]) recebe quebra de linha\n");
+                }
+
+                codigo_asm.append(";executa interrupção de saída\n");
+
+                codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
+                codigo_asm.append("\tmov rdx, rdi\t\t; tamanho da string\n");
+                codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
+                codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
+                codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
+            }
+            // escrever valor real
+            else if(tipo_Exp == tipo_float){
+                codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_Exp) + "] \t\t; real a ser convertido\n");
+                end_aux = novo_temp(256);
+                codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t;end. temporário\n");
+                codigo_asm.append("\tmov rcx, 0 \t\t;contador pilha\n");
+                codigo_asm.append("\tmov rdi, 6 \t\t;precisao 6 casas compart\n");
+                codigo_asm.append("\tmov rbx, 10 \t\t;divisor\n");
+                codigo_asm.append("\tcvtsi2ss xmm2, rbx \t\t;divisor real\n");
+                codigo_asm.append("\tsubss xmm1, xmm1 \t\t;zera registrador\n");
+                codigo_asm.append("\tcomiss xmm0, xmm1 \t\t;verifica sinal\n");
+                string R0 = novo_rotulo();
+                codigo_asm.append("\tjae " + R0 + "\t\t;salta se número positivo\n");
+                codigo_asm.append("\tmov dl, '-' \t\t;senão, escreve sinal –\n");
+                codigo_asm.append("\tmov [rsi], dl \t\t\n");
+                codigo_asm.append("\tmov rdx, -1 \t\t;Carrega -1 em RDX\n");
+                codigo_asm.append("\tcvtsi2ss xmm1, rdx \t\t;Converte para real\n");
+                codigo_asm.append("\tmulss xmm0, xmm1 \t\t;Toma módulo\n");
+                codigo_asm.append("\tadd rsi, 1 \t\t;incrementa índice\n");
+
+                codigo_asm.append(R0 + ": \t\t\n");
+                codigo_asm.append("\troundss xmm1, xmm0, 0b0011 \t\t;parte inteira xmm1\n");
+                codigo_asm.append("\tsubss xmm0, xmm1 \t\t;parte frac xmm0\n");
+                codigo_asm.append("\tcvtss2si rax, xmm1 \t\t;convertido para int\n");
+
+                codigo_asm.append(";converte parte inteira que está em rax\n");
+
+                string R1 = novo_rotulo();
+                codigo_asm.append(R1 + ": \t\t\n");
+                codigo_asm.append("\tadd rcx, 1 \t\t;incrementa contador\n");
+                codigo_asm.append("\tcdq \t\t;estende edx:eax p/ div.\n");
+                codigo_asm.append("\tidiv ebx \t\t;divide edx:eax por ebx\n");
+                codigo_asm.append("\tpush dx \t\t;empilha valor do resto\n");
+                codigo_asm.append("\tcmp eax, 0 \t\t;verifica se quoc. é 0\n");
+                codigo_asm.append("\tjne " + R1 + "\t\t;se não é 0, continua\n");
+                codigo_asm.append("\tsub rdi, rcx \t\t;decrementa precisao\n");
+
+                codigo_asm.append(";agora, desemp valores e escreve parte int\n");
+
+                string R2 = novo_rotulo();
+                codigo_asm.append(R2 + ": \t\t\n");
+                codigo_asm.append("\tpop dx \t\t;desempilha valor\n");
+                codigo_asm.append("\tadd dl, '0' \t\t;transforma em caractere\n");
+                codigo_asm.append("\tmov [rsi], dl \t\t;escreve caractere\n");
+                codigo_asm.append("\tadd rsi, 1 \t\t;incrementa base\n");
+                codigo_asm.append("\tsub rcx, 1 \t\t;decrementa contador\n");
+                codigo_asm.append("\tcmp rcx, 0 \t\t;verifica pilha vazia\n");
+                codigo_asm.append("\tjne " + R2 + "\t\t;se não pilha vazia, loop\n");
+
+                codigo_asm.append("\tmov dl, '.' \t\t;escreve ponto decimal\n");
+                codigo_asm.append("\tmov [rsi], dl \t\t;escreve ponto decimal\n");
+                codigo_asm.append("\tadd rsi, 1 \t\t;incrementa base\n");
+
+                codigo_asm.append(";converte parte fracionaria que está em xmm0\n");
+
+                string R3 = novo_rotulo();
+                string R4 = novo_rotulo();
+                codigo_asm.append(R3 + ": \t\t\n");
+                codigo_asm.append("\tcmp rdi, 0 \t\t;verifica precisao\n");
+                codigo_asm.append("\tjle " + R4 + " \t\t; terminou precisao ?\n");
+                codigo_asm.append("\tmulss xmm0,xmm2 \t\t;desloca para esquerda\n");
+                codigo_asm.append("\troundss xmm1,xmm0,0b0011 \t\t;parte inteira xmm1\n");
+                codigo_asm.append("\tsubss xmm0,xmm1 \t\t;atualiza xmm0\n");
+                codigo_asm.append("\tcvtss2si rdx, xmm1 \t\t;convertido para int\n");
+                codigo_asm.append("\tadd dl, '0' \t\t;transforma em caractere\n");
+                codigo_asm.append("\tmov [rsi], dl \t\t;escreve caractere\n");
+                codigo_asm.append("\tadd rsi, 1 \t\t;incrementa base\n");
+                codigo_asm.append("\tsub rdi, 1 \t\t;decrementa precisao\n");
+                codigo_asm.append("\tjmp " + R3 + "\t\t;loop\n");
+
+                codigo_asm.append("; impressão\n");
+                codigo_asm.append(R4 + ": \t\t\n");
+
+                codigo_asm.append("\tmov rdx, rsi \t\t;calc tam str convertido\n");
+                codigo_asm.append("\tmov rbx, M+" + int2hex(end_aux) + "\t\t;end. string ou temp\n");
+                codigo_asm.append("\tsub rdx, rbx \t\t;tam=rsi-M-buffer.end\n");
+                
+                if(writeln){
+                    codigo_asm.append("\tmov dl, 0xA \t\t; reg. dl recebe quebra de linha\n");
+                    codigo_asm.append("\tmov [rsi], dl \t\t; quebra de linha no final do float\n");
+                    codigo_asm.append("\tadd rsi, 1 \t\t;incrementa base\n");
+                }
+
+                codigo_asm.append(";executa interrupção de saída\n");
+
+                codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
+                codigo_asm.append("\t\t\t; tamanho da string ja está em rdx\n");
+                codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
+                codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
+                codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
+            }
+            // escreve char
+            else if (tipo_Exp = tipo_caractere){
+                codigo_asm.append("\tmov edx,0 \t\t; zera contador\n");
+                end_aux = novo_temp(2); // 1 byte a mais p/ quebra de linha
+
+                codigo_asm.append("\tmov al, [M+" + int2hex(end_Exp) + "] \t\t; carrega char no registrador temporario\n");
+                codigo_asm.append("\tmov [qword M+" +int2hex(end_aux) + "], al\t\t; novo_temp recebe o char\n");
+                codigo_asm.append("\tmov edx,1 \t\t; cont:=1 byte\n");
+
+                if(writeln){
+                    codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
+                    codigo_asm.append("\tadd rsi, edx \t\t; soma contador ao inicio\n");
+                    codigo_asm.append("\tmov al, 0xA \t\t; reg. al recebe quebra de linha\n");
+                    codigo_asm.append("\tmov [rsi], al \t\t; quebra de linha no final do char\n");
+                    codigo_asm.append("\tadd edx, 1 \t\t; contador++ p/ n dar pau com a quebra de linha\n");
+                }
+                
+                codigo_asm.append(";executa interrupção de saída\n");
+                
+                codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
+                codigo_asm.append("\tmov rdx, edx\t\t; tamanho do char\n");
+                codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
+                codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
+                codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
+            }
+            // escreve boolean
+            else if(tipo_Exp = tipo_boolean){
+                codigo_asm.append("\tmov edx,0 \t\t; zera contador\n");
+                end_aux = novo_temp(2); // 1 byte a mais p/ quebra de linha
+
+                codigo_asm.append("\tmov al, [M+" + int2hex(end_Exp) + "] \t\t; carrega char no registrador temporario\n");
+                codigo_asm.append("\tmov [qword M+" +int2hex(end_aux) + "], al\t\t; novo_temp recebe o char\n");
+                codigo_asm.append("\tmov edx,1 \t\t; cont:=1 byte\n");
+
+                if(writeln){
+                    codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
+                    codigo_asm.append("\tadd rsi, edx \t\t; soma contador ao inicio\n");
+                    codigo_asm.append("\tmov al, 0xA \t\t; reg. al recebe quebra de linha\n");
+                    codigo_asm.append("\tmov [rsi], al \t\t; quebra de linha no final do char\n");
+                    codigo_asm.append("\tadd edx, 1 \t\t; contador++ p/ n dar pau com a quebra de linha\n");
+                }
+
+                codigo_asm.append(";executa interrupção de saída\n");
+
+                codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
+                codigo_asm.append("\tmov rdx, edx\t\t; tamanho do booleano\n");
+                codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
+                codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
+                codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
+            }
+            // escreve string
+            else{
+                codigo_asm.append("\tmov edx,0 \t\t; zera contador\n");
+                end_aux = novo_temp(tamanho_Exp+1); // 1 byte a mais p/ quebra de linha
+
+                codigo_asm.append("\tmov rax, qword M+" + int2hex(end_Exp) + "\t\t; rax recebe endereco de Exp\n");
+                codigo_asm.append("\tmov rbx, qword M+" + int2hex(end_aux) + "\t\t; rbx recebe endereco de novo_temp\n");
+                string next_char = novo_rotulo();
+                codigo_asm.append("\tmov al, [rax] \t\t; guarda o char atual da string\n");
+                codigo_asm.append("\tmov [rbx], al \t\t; salva esse char no temp\n");
+                codigo_asm.append("\tadd edx,1 \t\t; contador++\n");
+                codigo_asm.append("\tadd rax, 1 \t\t; proximo char (Exp)\n");
+                codigo_asm.append("\tadd rbx, 1 \t\t; proximo char (temp)\n");
+                codigo_asm.append("\tcmp al,0 \t\t; checa se eh fim da str\n");
+                codigo_asm.append("\tjne " + next_char + "\t\t; se não eh o fim, continua o loop (jump p/ next_char)\n");
+                codigo_asm.append("\tsub edx,1 \t\t; contador-- (remove o fim da str)\n");
+
+                if(writeln){
+                    codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
+                    codigo_asm.append("\tadd rsi, edx \t\t; soma contador ao inicio\n");
+                    codigo_asm.append("\tmov al, 0xA \t\t; reg. al recebe quebra de linha\n");
+                    codigo_asm.append("\tmov [rsi], al \t\t; quebra de linha no final do char\n");
+                    codigo_asm.append("\tadd edx, 1 \t\t; contador++ p/ n dar pau com a quebra de linha\n");
+                }
+
+                codigo_asm.append(";executa interrupção de saída\n");
+                
+                codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
+                codigo_asm.append("\tmov rdx, edx\t\t; tamanho da str\n");
+                codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
+                codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
+                codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
+            }
+
         }// fim da producao de escrita
 
         casaToken(TK_pontoevirgula);
@@ -1645,8 +2253,8 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             /* GERAÇÃO DE CÓDIGO (=) */
             // ambos operandos sao inteiros
             if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
-                codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
-                codigo_asm.append("\tmov ebx,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
+                codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tje " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
@@ -1663,26 +2271,26 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
                 // ExpS eh inteiro
                 if(tipo_ExpS_aux == tipo_inteiro){
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ real\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ real\n");
                 }
                 // ExpS eh real
                 else {
-                    codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
+                    codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
                 }
                 
                 // ExpS1 eh inteiro
                 if(tipo_ExpS1 == tipo_inteiro){
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm1,eax \t\t; converte p/ real\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm1, eax \t\t; converte p/ real\n");
                 }
                 // ExpS1 eh real
                 else {
-                    codigo_asm.append("\tmovss xmm1,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
+                    codigo_asm.append("\tmovss xmm1, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
                 }
 
                 // faz (=)
-                codigo_asm.append("\tcomiss xmm0,xmm1\t\t; faz comparacao (ExpS e ExpS1)\n");
+                codigo_asm.append("\tcomiss xmm0, xmm1\t\t; faz comparacao (ExpS e ExpS1)\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tje " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=false\n");
@@ -1700,15 +2308,15 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
 
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=0\n");
                 codigo_asm.append("\tmov ebx,0 \t\t; ebx:=0\n");
-                codigo_asm.append("\tmov rsi,qword M+" + int2hex(end_ExpS) + "\t\t; guarda ExpS.end em rsi\n");
-                codigo_asm.append("\tmov rdi,qword M+" + int2hex(end_ExpS1) + "\t\t; guarda ExpS1.end em rdi\n");
+                codigo_asm.append("\tmov rax, qword M+" + int2hex(end_ExpS) + "\t\t; guarda ExpS.end em rax\n");
+                codigo_asm.append("\tmov rbx, qword M+" + int2hex(end_ExpS1) + "\t\t; guarda ExpS1.end em rbx\n");
                 string next_char = novo_rotulo();
                 codigo_asm.append(next_char + ": \t\t; rotulo p/ ler proximo char da str\n");
-                codigo_asm.append("\tmov al,[rsi] \t\t; guarda o char atual de ExpS\n");
-                codigo_asm.append("\tmov bl,[rdi] \t\t; guarda o char atual de ExpS1\n");
-                codigo_asm.append("\tadd rsi,1 \t\t; aponta p/ o char seguinte (anda 1 byte p/ frente)\n");
-                codigo_asm.append("\tadd rdi,1 \t\t; aponta p/ o char seguinte (anda 1 byte p/ frente)\n");
-                codigo_asm.append("\tcmp al,bl \t\t; compara chars\n");
+                codigo_asm.append("\tmov al, [rax] \t\t; guarda o char atual de ExpS\n");
+                codigo_asm.append("\tmov bl, [rbx] \t\t; guarda o char atual de ExpS1\n");
+                codigo_asm.append("\tadd rax, 1 \t\t; aponta p/ o char seguinte (anda 1 byte p/ frente)\n");
+                codigo_asm.append("\tadd rbx, 1 \t\t; aponta p/ o char seguinte (anda 1 byte p/ frente)\n");
+                codigo_asm.append("\tcmp al, bl \t\t; compara chars\n");
                 string rot_falso = novo_rotulo();
                 codigo_asm.append("\tjne " + rot_falso + "\t\t; pula p/ rot_verdadeiro\n");
                 codigo_asm.append("\tcmp eax,0\t\t; checa se eh o fim da string\n");
@@ -1727,8 +2335,8 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=0\n");
                 codigo_asm.append("\tmov ebx,0 \t\t; ebx:=0\n");
-                codigo_asm.append("\tmov al,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
-                codigo_asm.append("\tmov bl,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
+                codigo_asm.append("\tmov al, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
+                codigo_asm.append("\tmov bl, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; comparar resultado\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tje " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
@@ -1767,8 +2375,8 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             /* GERAÇÃO DE CÓDIGO (!=) */
             // ambos operandos sao inteiros
             if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
-                codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
-                codigo_asm.append("\tmov ebx,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
+                codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tjne " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
@@ -1785,26 +2393,26 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
                 // ExpS eh inteiro
                 if(tipo_ExpS_aux == tipo_inteiro){
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ real\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ real\n");
                 }
                 // ExpS eh real
                 else {
-                    codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
+                    codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
                 }
 
                 // ExpS1 eh inteiro
                 if(tipo_ExpS1 == tipo_inteiro){
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm1,eax \t\t; converte p/ real\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm1, eax \t\t; converte p/ real\n");
                 }
                 // ExpS1 eh real
                 else {
-                    codigo_asm.append("\tmovss xmm1,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
+                    codigo_asm.append("\tmovss xmm1, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
                 }
 
                 // faz (!=)
-                codigo_asm.append("\tcomiss xmm0,xmm1\t\t; faz comparacao (ExpS e ExpS1)\n");
+                codigo_asm.append("\tcomiss xmm0, xmm1\t\t; faz comparacao (ExpS e ExpS1)\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tjne " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=false\n");
@@ -1820,8 +2428,8 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=0\n");
                 codigo_asm.append("\tmov ebx,0 \t\t; ebx:=0\n");
-                codigo_asm.append("\tmov al,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
-                codigo_asm.append("\tmov bl,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
+                codigo_asm.append("\tmov al, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
+                codigo_asm.append("\tmov bl, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; comparar resultado\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tjne " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
@@ -1860,8 +2468,8 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             /* GERAÇÃO DE CÓDIGO (>) */
             // ambos operandos sao inteiros
             if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
-                codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
-                codigo_asm.append("\tmov ebx,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
+                codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tjg " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
@@ -1878,26 +2486,26 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
                 // ExpS eh inteiro
                 if(tipo_ExpS_aux == tipo_inteiro){
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ real\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ real\n");
                 }
                 // ExpS eh real
                 else {
-                    codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
+                    codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
                 }
                 
                 // ExpS1 eh inteiro
                 if(tipo_ExpS1 == tipo_inteiro){
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm1,eax \t\t; converte p/ real\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm1, eax \t\t; converte p/ real\n");
                 }
                 // ExpS1 eh real
                 else {
-                    codigo_asm.append("\tmovss xmm1,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
+                    codigo_asm.append("\tmovss xmm1, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
                 }
 
                 // faz (>)
-                codigo_asm.append("\tcomiss xmm0,xmm1\t\t; faz comparacao (ExpS e ExpS1)\n");
+                codigo_asm.append("\tcomiss xmm0, xmm1\t\t; faz comparacao (ExpS e ExpS1)\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tja " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=false\n");
@@ -1913,8 +2521,8 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=0\n");
                 codigo_asm.append("\tmov ebx,0 \t\t; ebx:=0\n");
-                codigo_asm.append("\tmov al,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
-                codigo_asm.append("\tmov bl,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
+                codigo_asm.append("\tmov al, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
+                codigo_asm.append("\tmov bl, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; comparar resultado\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tjg " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
@@ -1953,8 +2561,8 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             /* GERAÇÃO DE CÓDIGO (<) */
             // ambos inteiros
             if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
-                codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
-                codigo_asm.append("\tmov ebx,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
+                codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tjl " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
@@ -1972,26 +2580,26 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
                 // ExpS eh inteiro
                 if(tipo_ExpS_aux == tipo_inteiro){
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ real\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ real\n");
                 }
                 // ExpS eh real
                 else {
-                    codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
+                    codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
                 }
                 
                 // ExpS1 eh inteiro
                 if(tipo_ExpS1 == tipo_inteiro){
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm1,eax \t\t; converte p/ real\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm1, eax \t\t; converte p/ real\n");
                 }
                 // ExpS1 eh real
                 else {
-                    codigo_asm.append("\tmovss xmm1,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
+                    codigo_asm.append("\tmovss xmm1, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
                 }
 
                 // faz (<)
-                codigo_asm.append("\tcomiss xmm0,xmm1\t\t; comparar resultado\n");
+                codigo_asm.append("\tcomiss xmm0, xmm1\t\t; comparar resultado\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tjb " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=false\n");
@@ -2007,8 +2615,8 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=0\n");
                 codigo_asm.append("\tmov ebx,0 \t\t; ebx:=0\n");
-                codigo_asm.append("\tmov al,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
-                codigo_asm.append("\tmov bl,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
+                codigo_asm.append("\tmov al, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
+                codigo_asm.append("\tmov bl, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; comparar resultado\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tjl " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
@@ -2047,8 +2655,8 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             /* GERAÇÃO DE CÓDIGO (<=) */
             // ambos operandos sao inteiros
             if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
-                codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
-                codigo_asm.append("\tmov ebx,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
+                codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tjle " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
@@ -2066,26 +2674,26 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
                 // ExpS eh inteiro
                 if(tipo_ExpS_aux == tipo_inteiro){
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ real\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ real\n");
                 }
                 // ExpS eh real
                 else {
-                    codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
+                    codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
                 }
                 
                 // ExpS1 eh inteiro
                 if(tipo_ExpS1 == tipo_inteiro){
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm1,eax \t\t; converte p/ real\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm1, eax \t\t; converte p/ real\n");
                 }
                 // ExpS1 eh real
                 else {
-                    codigo_asm.append("\tmovss xmm1,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
+                    codigo_asm.append("\tmovss xmm1, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
                 }
 
                 // faz (<=)
-                codigo_asm.append("\tcomiss xmm0,xmm1\t\t; faz comparacao (ExpS e ExpS1)\n");
+                codigo_asm.append("\tcomiss xmm0, xmm1\t\t; faz comparacao (ExpS e ExpS1)\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tjbe " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=false\n");
@@ -2102,8 +2710,8 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=0\n");
                 codigo_asm.append("\tmov ebx,0 \t\t; ebx:=0\n");
-                codigo_asm.append("\tmov al,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
-                codigo_asm.append("\tmov bl,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
+                codigo_asm.append("\tmov al, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
+                codigo_asm.append("\tmov bl, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; comparar resultado\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tjle " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
@@ -2142,8 +2750,8 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             /* GERAÇÃO DE CÓDIGO (>=) */
             // ambos operandos sao inteiros
             if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
-                codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
-                codigo_asm.append("\tmov ebx,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
+                codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tjge " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
@@ -2161,26 +2769,26 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
                 // ExpS eh inteiro
                 if(tipo_ExpS_aux == tipo_inteiro){
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ real\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ real\n");
                 }
                 // ExpS eh real
                 else {
-                    codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
+                    codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em xmm0\n");
                 }
                 
                 // ExpS1 eh inteiro
                 if(tipo_ExpS1 == tipo_inteiro){
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm1,eax \t\t; converte p/ real\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm1, eax \t\t; converte p/ real\n");
                 }
                 // ExpS1 eh real
                 else {
-                    codigo_asm.append("\tmovss xmm1,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
+                    codigo_asm.append("\tmovss xmm1, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end em xmm1\n");
                 }
 
                 // faz (>=)
-                codigo_asm.append("\tcomiss xmm0,xmm1\t\t; faz comparacao (ExpS e ExpS1)\n");
+                codigo_asm.append("\tcomiss xmm0, xmm1\t\t; faz comparacao (ExpS e ExpS1)\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tjae " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=false\n");
@@ -2197,8 +2805,8 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=0\n");
                 codigo_asm.append("\tmov ebx,0 \t\t; ebx:=0\n");
-                codigo_asm.append("\tmov al,[qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
-                codigo_asm.append("\tmov bl,[qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
+                codigo_asm.append("\tmov al, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
+                codigo_asm.append("\tmov bl, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega ExpS1.end\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; comparar resultado\n");
                 string rot_verdadeiro = novo_rotulo();
                 codigo_asm.append("\tjge " + rot_verdadeiro + "\t\t; pula p/ rot_verdadeiro\n");
@@ -2250,15 +2858,15 @@ void ExpS(int* tipo_ExpS, int* tamanho_ExpS, int* end_ExpS) {
     else{
         end_aux = novo_temp(4);
         if (tipo_T == tipo_inteiro){
-            codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_T) + "] \t\t; carrega [T.end] em eax\n");
+            codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_T) + "] \t\t; carrega [T.end] em eax\n");
             codigo_asm.append("\tneg eax \t\t; nega valor de eax \n");
             codigo_asm.append("\tmov [qword M+" + int2hex(end_aux) + "],eax \t\t; copia resultado p/ novo endereco\n");
         }
         else{
-            codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_T) + "] \t\t; carrega [T.end] em xmm0\n");
+            codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_T) + "] \t\t; carrega [T.end] em xmm0\n");
             codigo_asm.append("\tmov eax,-1 \t\t; carrega eax com -1\n");
-            codigo_asm.append("\tcvtsi2ss xmm1,eax \t\t; converte eax p/ real\n");
-            codigo_asm.append("\tmulss xmm0,xmm1 \t\t; multiplica xmm0 por -1\n");
+            codigo_asm.append("\tcvtsi2ss xmm1, eax \t\t; converte eax p/ real\n");
+            codigo_asm.append("\tmulss xmm0, xmm1 \t\t; multiplica xmm0 por -1\n");
             codigo_asm.append("\tmovss [qword M+" + int2hex(end_aux) + "],xmm0 \t\t; copia resultado p/ novo endereco\n");
         }
         end_T = end_aux;
@@ -2319,8 +2927,8 @@ void ExpS(int* tipo_ExpS, int* tamanho_ExpS, int* end_ExpS) {
         if (adicao || subtracao){
             // se resultado da operacao for um inteiro, ambos operandos (T e T1) sao inteiros
             if (tipo_T == tipo_inteiro){
-                codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_T) + "]\t\t; carrega [T.end] em eax\n");
-                codigo_asm.append("\tmov ebx,[qword M+" + int2hex(end_T1) + "]\t\t; carrega [T1.end] em ebx\n");
+                codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_T) + "]\t\t; carrega [T.end] em eax\n");
+                codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_T1) + "]\t\t; carrega [T1.end] em ebx\n");
                 
                 if (adicao){
                     codigo_asm.append("\tadd eax,ebx\t\t; faz adicao\n");
@@ -2335,34 +2943,34 @@ void ExpS(int* tipo_ExpS, int* tamanho_ExpS, int* end_ExpS) {
             else{
                 // T eh inteiro
                 if(tipo_T_aux == tipo_inteiro){
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_T) + "]\t\t; carrega [T.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm0,eax\t\t; converte eax p/ real\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_T) + "]\t\t; carrega [T.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte eax p/ real\n");
                 }
                 // T eh real
                 else{
-                    codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_T) + "]\t\t; carrega [T.end] em xmm0\n");
+                    codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_T) + "]\t\t; carrega [T.end] em xmm0\n");
                 }
                 // T1 eh inteiro
                 if(tipo_T1 == tipo_inteiro){
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_T1) + "]\t\t; carrega [T1.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm1,eax\t\t; converte reg para real\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_T1) + "]\t\t; carrega [T1.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm1, eax\t\t; converte reg para real\n");
                 }
                 // T1 eh real
                 else{
-                    codigo_asm.append("\tmovss xmm1,[qword M+" + int2hex(end_T1) + "]\t\t; carrega [T1.end] em xmm1\n");
+                    codigo_asm.append("\tmovss xmm1, [qword M+" + int2hex(end_T1) + "]\t\t; carrega [T1.end] em xmm1\n");
                 }
 
                 // faz a soma ou subtracao de T com T1
-                if(adicao) codigo_asm.append("\taddss xmm0,xmm1 \t\t; faz adicao\n");
-                else codigo_asm.append("\tsubss xmm0,xmm1 \t\t; faz subtracao\n");
+                if(adicao) codigo_asm.append("\taddss xmm0, xmm1 \t\t; faz adicao\n");
+                else codigo_asm.append("\tsubss xmm0, xmm1 \t\t; faz subtracao\n");
             }
         }
         // se a operacao for ||
         else{
-            codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_T) + "]\t\t; carrega [T.end] em eax\n");
+            codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_T) + "]\t\t; carrega [T.end] em eax\n");
             codigo_asm.append("\tneg eax \t\t; inverte o sinal\n");
             codigo_asm.append("\tadd eax,1 \t\t; faz o complemento de 2\n");
-            codigo_asm.append("\tmov ebx,[qword M+" + int2hex(end_T1) + "]\t\t; carrega [T1.end] em ebx\n");
+            codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_T1) + "]\t\t; carrega [T1.end] em ebx\n");
             codigo_asm.append("\tneg ebx \t\t; inverte o sinal\n");
             codigo_asm.append("\tadd ebx,1 \t\t; faz o complemento de 2\n");
             codigo_asm.append("\tmov edx,0 \t\t; limpa edx p/ multiplicacao, caso haja overflow\n");
@@ -2471,40 +3079,40 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
                 // ambos operandos inteiros
                 if (tipo_F == tipo_inteiro && tipo_F1 == tipo_inteiro){
                     
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ float e armazena em xmm0\n");
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm1,eax\t\t; converte p/ float e armazena em xmm1\n");
-                    codigo_asm.append("\tdivss xmm0,xmm1\t\t; faz a divisao\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ float e armazena em xmm0\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm1, eax\t\t; converte p/ float e armazena em xmm1\n");
+                    codigo_asm.append("\tdivss xmm0, xmm1\t\t; faz a divisao\n");
                     end_F = novo_temp(4);
                     codigo_asm.append("\tmovss [qword M+" + int2hex(end_F) + "],xmm0 \t\t; copia resultado p/ [F.end]\n");
                 }
                 // apenas F for float
                 else if (tipo_F == tipo_float && tipo_F1 != tipo_float){
                     
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm1,eax\t\t; converte p/ float e armazena em xmm1\n");
-                    codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_F) + "]\t\t; carrega F.end em xmm0\n");
-                    codigo_asm.append("\tdivss xmm0,xmm1\t\t; faz a divisao\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm1, eax\t\t; converte p/ float e armazena em xmm1\n");
+                    codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_F) + "]\t\t; carrega F.end em xmm0\n");
+                    codigo_asm.append("\tdivss xmm0, xmm1\t\t; faz a divisao\n");
                     end_F = novo_temp(4);
                     codigo_asm.append("\tmovss [qword M+" + int2hex(end_F) + "],xmm0 \t\t; copia resultado p/ [F.end]\n");
                 }
                 // apenas F1 for float
                 else if (tipo_F1 == tipo_float && tipo_F != tipo_float){
 
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ float e armazena em xmm0\n");
-                    codigo_asm.append("\tmovss xmm1,[qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em xmm1\n");
-                    codigo_asm.append("\tdivss xmm0,xmm1\t\t; faz a divisao\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ float e armazena em xmm0\n");
+                    codigo_asm.append("\tmovss xmm1, [qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em xmm1\n");
+                    codigo_asm.append("\tdivss xmm0, xmm1\t\t; faz a divisao\n");
                     end_F = novo_temp(4);
                     codigo_asm.append("\tmovss [qword M+" + int2hex(end_F) + "],xmm0 \t\t; copia resultado p/ [F.end]\n");
                 }
                 // ambos float
                 else{
                     
-                    codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em xmm0\n");
-                    codigo_asm.append("\tmovss xmm1,[qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em xmm1\n");
-                    codigo_asm.append("\tdivss xmm0,xmm1\t\t; faz a divisao\n");
+                    codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em xmm0\n");
+                    codigo_asm.append("\tmovss xmm1, [qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em xmm1\n");
+                    codigo_asm.append("\tdivss xmm0, xmm1\t\t; faz a divisao\n");
                     end_F = novo_temp(4);
                     codigo_asm.append("\tmovss [qword M+" + int2hex(end_F) + "],xmm0 \t\t; copia resultado p/ [F.end]\n");
                 }
@@ -2518,8 +3126,8 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
 
                 /* GERAÇÃO DE CÓDIGO */
                 
-                codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
-                codigo_asm.append("\tmov ebx,[qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em ebx\n");
+                codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
+                codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em ebx\n");
                 codigo_asm.append("\tmov edx,0 \t\t; limpa edx p/ multiplicacao, caso haja overflow\n");
                 codigo_asm.append("\timul ebx\t\t; multiplica\n");
                 end_F = novo_temp(4);
@@ -2533,28 +3141,28 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
                 // apenas F for float
                 if (tipo_F == tipo_float && tipo_F1 != tipo_float){
                     
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm1,eax\t\t; converte p/ float e armazena em xmm1\n");
-                    codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em xmm0\n");
-                    codigo_asm.append("\tmulss xmm0,xmm1\t\t; multiplica\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm1, eax\t\t; converte p/ float e armazena em xmm1\n");
+                    codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em xmm0\n");
+                    codigo_asm.append("\tmulss xmm0, xmm1\t\t; multiplica\n");
                     end_F = novo_temp(4);
                     codigo_asm.append("\tmovss [qword M+" + int2hex(end_F) + "],xmm0 \t\t; copia resultado p/ [F.end]\n");
                 }
                 // apenas F1 for float
                 else if (tipo_F1 == tipo_float && tipo_F != tipo_float){
                     
-                    codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
-                    codigo_asm.append("\tcvtsi2ss xmm0,eax\t\t; converte p/ float e armazena em xmm0\n");
-                    codigo_asm.append("\tmovss xmm1,[qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em xmm1\n");
-                    codigo_asm.append("\tmulss xmm0,xmm1\t\t; multiplica\n");
+                    codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
+                    codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ float e armazena em xmm0\n");
+                    codigo_asm.append("\tmovss xmm1, [qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em xmm1\n");
+                    codigo_asm.append("\tmulss xmm0, xmm1\t\t; multiplica\n");
                     end_F = novo_temp(4);
                     codigo_asm.append("\tmovss [qword M+" + int2hex(end_F) + "],xmm0 \t\t; copia resultado p/ [F.end]\n");
                 }
                 // ambos float
                 else{
-                    codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em xmm0\n");
-                    codigo_asm.append("\tmovss xmm1,[qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em xmm1\n");
-                    codigo_asm.append("\tmulss xmm0,xmm1\t\t; multiplica\n");
+                    codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em xmm0\n");
+                    codigo_asm.append("\tmovss xmm1, [qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em xmm1\n");
+                    codigo_asm.append("\tmulss xmm0, xmm1\t\t; multiplica\n");
                     end_F = novo_temp(4);
                     codigo_asm.append("\tmovss [qword M+" + int2hex(end_F) + "],xmm0 \t\t; copia resultado p/ [F.end]\n");
                 }
@@ -2570,8 +3178,8 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
             }
             // faz o &&
             else{
-                codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
-                codigo_asm.append("\tmov ebx,[qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em ebx\n");
+                codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
+                codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em ebx\n");
                 codigo_asm.append("\tmov edx,0 \t\t; limpa edx p/ multiplicacao, caso haja overflow\n");
                 codigo_asm.append("\timul ebx\t\t; multiplica\n");
                 end_F = novo_temp(4);
@@ -2585,8 +3193,8 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
             }
             // faz o div
             else if (div){
-                codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
-                codigo_asm.append("\tmov ebx,[qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em ebx\n");
+                codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
+                codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em ebx\n");
                 codigo_asm.append("\tmov edx,0 \t\t; limpa edx p/ multiplicacao, caso haja overflow\n");
                 codigo_asm.append("\tidiv ebx\t\t; faz a divisao (pega o quociente da operacao na prox instrucao)\n");
                 end_F = novo_temp(4);
@@ -2594,8 +3202,8 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
             }
             // faz o mod
             else{
-                codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
-                codigo_asm.append("\tmov ebx,[qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em ebx\n");
+                codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
+                codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em ebx\n");
                 codigo_asm.append("\tmov edx,0 \t\t; limpa edx p/ multiplicacao, caso haja overflow\n");
                 codigo_asm.append("\tidiv ebx\t\t; faz a divisao (pega o resto da operacao na prox instrucao)\n");
                 end_F = novo_temp(4);
@@ -2678,12 +3286,12 @@ void F(int* tipo_F, int* tamanho_F, int* end_F) {
         if (*tipo_F == tipo_inteiro) {
             // Exp eh int, apenas guarda no novo end
             if (tipo_Exp == tipo_inteiro) {
-                codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em eax\n");
+                codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em eax\n");
                 codigo_asm.append("\tmov [qword M+" + int2hex(end_aux) + "],eax \t\t; guarda valor no novo endereco\n");
             }
             // Exp eh float, converte p/ int
             else {
-                codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em xmm0\n");
+                codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em xmm0\n");
                 codigo_asm.append("\troundss xmm1, xmm0, 0b0011 \t\t; trunca parte fracionaria e deixa somente a parte inteira em xmm1\n");
                 codigo_asm.append("\tcvtss2si eax, xmm1 \t\t; converte p/ int e guarda em eax\n");
                 codigo_asm.append("\tmov [qword M+" + int2hex(end_aux) + "],eax \t\t; guarda valor no novo endereco\n");
@@ -2693,13 +3301,13 @@ void F(int* tipo_F, int* tamanho_F, int* end_F) {
         else {
             // Exp eh int, converte p/ float
             if (tipo_Exp == tipo_inteiro) {
-                codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_Exp) + "]\t\t; carrega [Exp.end] em eax\n");
-                codigo_asm.append("\tcvtsi2ss xmm0,eax \t\t; converte p/ real e guarda em xmm0\n");
+                codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_Exp) + "]\t\t; carrega [Exp.end] em eax\n");
+                codigo_asm.append("\tcvtsi2ss xmm0, eax \t\t; converte p/ real e guarda em xmm0\n");
                 codigo_asm.append("\tmovss [qword M+" + int2hex(end_aux) + "],xmm0 \t\t; guarda valor no novo endereco\n");
             }
             // Exp eh float, apenas guarda no novo end
             else {
-                codigo_asm.append("\tmovss xmm0,[qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em xmm0\n");
+                codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em xmm0\n");
                 codigo_asm.append("\tmovss [qword M+" + int2hex(end_aux) + "],xmm0 \t\t; guarda valor no novo endereco\n");
             }// fim if else
         }// fim if else
@@ -2755,13 +3363,13 @@ void F(int* tipo_F, int* tamanho_F, int* end_F) {
                 *tipo_F = tipo_caractere;
 
             /* GERAÇÃO DE CÓDIGO */
-            // Aloca novo temporario com o valor do caractere na string desejada
-            int end_aux = novo_temp(1); // recupera endereco de memoria e aloca a proxima disponivel na area de temps
-            codigo_asm.append("\tmov rdi,qword M+" + int2hex(*end_F) + "\t\t; carrega [F.end] (inicio da string) em rdi\n");
-            codigo_asm.append("\tmov rax,0 \t\t; rax:=0\n");
-            codigo_asm.append("\tmov rax,[qword M+" + int2hex(end_Exp) + "] \t\t; rax recebe posicao do char\n");
-            codigo_asm.append("\tadd rdi,rax \t\t; soma inicio da string com posicao do char\n");
-            codigo_asm.append("\tmov bl,[rdi] \t\t; guarda o char em bl\n");
+            // guarda o novo char na posicao da string, indicada por Exp
+            int end_aux = novo_temp(1);
+            codigo_asm.append("\tmov rax,qword M+" + int2hex(*end_F) + "\t\t; carrega [F.end] (inicio da string) em rax\n");
+            codigo_asm.append("\tmov rbx,0 \t\t; rbx:=0\n");
+            codigo_asm.append("\tmov rbx, [qword M+" + int2hex(end_Exp) + "] \t\t; rbx recebe posicao do char\n");
+            codigo_asm.append("\tadd rax,rbx \t\t; soma inicio da string com posicao do char\n");
+            codigo_asm.append("\tmov bl, [rax] \t\t; guarda o char em bl\n");
             codigo_asm.append("\tmov [qword M+" + int2hex(end_aux) + "],bl \t\t; guarda char no novo endereco\n");
 
             *tamanho_F = 1; // tamanho de F = tamanho do char (1byte)
@@ -2783,9 +3391,9 @@ void F(int* tipo_F, int* tamanho_F, int* end_F) {
         else *tipo_F = tipo_F1;
 
         /* GERAÇÃO DE CÓDIGO */
-        // Aloca novo temporario com o valor do booleano (inteiro) negado
-        int end_aux = novo_temp(4); // recupera endereco de memoria e aloca a proxima disponivel na area de temps
-        codigo_asm.append("\tmov eax,[qword M+" + int2hex(end_F1) + "] \t\t; carrega [F1.end] em eax\n");
+        // guarda o novo_temp com valor de F negado
+        int end_aux = novo_temp(4);
+        codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_F1) + "] \t\t; carrega [F1.end] em eax\n");
         codigo_asm.append("\tneg eax \t\t; inverte o sinal\n");
         codigo_asm.append("\tadd eax,1 \t\t; faz o complemento de 2\n");
         codigo_asm.append("\tmov [qword M+" + int2hex(end_aux) + "],eax \t\t; copia resultado p/ novo endereco\n");
@@ -2798,11 +3406,17 @@ int main(int argc, char const *argv[]) {
     char c;
     bool erro = false;
 
+    inicializa_asm();
+
     getNextToken();
     S();
 
-    if (!erro)
+    if (!erro){
         cout << nLinhasCompiladas << " linhas compiladas.";
-
+        finaliza_asm();
+    } else {
+        codigo_asm.append("; ---ERRO---\n; COMPILACAO INTERROMPIDA");
+    }
+    
     return 0;
 }
