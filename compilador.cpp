@@ -144,6 +144,7 @@ string int2hex(int number){
 
     return ss.str();
 }
+
 // EXCLUIR METODO ABAIXO 
 // string int2hex(int end) {
 //     char endHex[40];
