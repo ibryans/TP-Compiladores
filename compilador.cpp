@@ -3393,6 +3393,9 @@ void F(int* tipo_F, int* tamanho_F, int* end_F) {
         Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
         *tipo_F = tipo_Exp;
 
+        // Endereço de F recebe o endereço de Exp
+        *end_F = end_Exp;
+
         casaToken(TK_fechaParentese);
     }
 

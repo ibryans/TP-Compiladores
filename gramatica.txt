@@ -1,157 +1,275 @@
+---------------------------------------------
+       Trabalho Prático de Compiladores     
+  Gramática e Ações Semânticas da Linguagem 
+---------------------------------------------
+      Bryan Santos e Igor Reis - 02/2022
+---------------------------------------------
+
 Gramática:
 
-   S	 -> { Dec | Comandos } EOF
+S:   { Dec | Comandos } EOF
 
-  Dec	 -> ( const id (29) = [- (40)] (constante | true | false) (30) |
-            (int (31) | float (32) | char (33) | string (34) ) id (35) [:= [- (36)] constante (37) ] {, id (35) [:= [- (36) ] constante (37) ]} | 
-	        boolean id (38) [:= (true | false)] {, id (38) [:= (true | false)]} );
+Dec:   const id (29) = [- (40)] (constante | true | false) (30) 
+Dec:   (int (31) | float (32) | char (33) | string (34) ) id (35) [:= [- (36)] constante (37) ] {, id (35) [:= [- (36) ] constante (37) ]}
+Dec:   boolean id (38) [:= (true | false)] {, id (38) [:= (true | false)]} );
 
-Comandos -> ( if "("Exp")" (24) ( Comandos | "{" {Comandos} "}" ) [ else ( Comandos | "{" {Comandos} "}" ) ] |
-		      while "("Exp")" (24) ( Comandos | "{" {Comandos} "}" ) )  | 
-		    [ id (25) [ "[" (6) Exp (26) "]" ] := Exp (27) |
-            readln "(" id (25) ")" |
-            (write | writeln) "(" Exp (28) {, Exp (28) } ")" ];
+Comandos:   if "(" Exp ")" (24) (Comandos | "{" {Comandos} "}") [else (Comandos | "{" {Comandos} "}")]
+Comandos:   while "(" Exp ")" (24) (Comandos | "{" {Comandos} "}")
+Comandos:   [ id (25) [ "[" (6) Exp (26) "]" ] := Exp (27)  |  readln "(" id (25) ")"  |  (write | writeln) "(" Exp (28) {, Exp (28) } ")" ];
 
-  Exp    -> ExpS [ (= | != | < | > | <= | >=) ExpS1 (22) ] (23)
+Exp:   ExpS (GC11) [ (= | != | < | > | <= | >=) ExpS1 (22) (GC12) ] (23)
 
- ExpS    -> [- (39)] T (15) { (+ (16) | - (17) | "||" (18) ) T1 (19) } (20)
+ExpS:   [- (39)] T (15) (GC9) { (+ (16) | - (17) | "||" (18) ) T1 (19) (GC10) } (20)
 
-   T	 -> F { ( / (9) | * (10) | && (11) | div (12) | mod (12) ) F1 (13) } (14)
+T:   F (GC7) { ( / (9) | * (10) | && (11) | div (12) | mod (12) ) F1 (13) (GC8)} (14)
 
-   F     -> constante (1) | (int | float) (2) "(" Exp (3) ")" | "(" Exp (4) ")" | id (5) [ "[" (6) Exp (7) "]" ] | ! F (8)
+F:   constante (1) (GC1)
+F:   (int | float) (2) "(" Exp (3) ")" (GC2)
+F:   "(" Exp (4) ")" (GC3)
+F:   id (5) (GC4) [ "[" (6) Exp (7) "]" (GC5)]
+F:   ! F1 (8) (GC6)
 
 
-(1) {F.tipo := constante.tipo}
-(2) {F.tipo := inteiro || F.tipo := real}
-(3) {se Exp.tipo != inteiro && Exp.tipo != real
-	    ERRO}
-(4) {F.tipo := Exp.tipo}
-(5) {se id.classe := classe_nula
+
+Ações Semânticas
+
+(1) { F.tipo := constante.tipo }
+
+(2) { F.tipo := inteiro || F.tipo := real }
+
+(3) {
+  se Exp.tipo != inteiro && Exp.tipo != real
+    ERRO
+}
+
+(4) { F.tipo := Exp.tipo }
+
+(5) { 
+  se id.classe := classe_nula
+    ERRO
+  senão 
+    F.tipo := id.tipo
+}
+
+(6) {
+  se id.tipo != string
+    ERRO
+}
+
+(7) {
+  se Exp.tipo := inteiro
+    F.tipo := caractere
+  senão 
+    ERRO
+}
+
+(8) {
+  se F1.tipo != logico
+    ERRO
+  senão F.tipo := F1.tipo
+}
+
+(9) {
+  se F.tipo != inteiro && F.tipo != real
+    ERRO
+  senão 
+    F.flag_divisao := verdadeiro
+}
+
+(10) {
+  se F.tipo != inteiro && F.tipo != real
+    ERRO
+  senão 
+    F.flag_multiplicacao := verdadeiro
+}
+
+(11) {
+  se F.tipo != logico
+    ERRO
+}
+
+(12) {
+  se F.tipo != inteiro
+    ERRO
+}
+
+(13) {
+  se F.flag_divisao || F.flag_multiplicacao
+    se F1.tipo != inteiro && F1.tipo != real
+      ERRO
+    senão se F.flag_divisao
+      F.tipo := real
+    senão se F.tipo = inteiro && F1.tipo = inteiro
+      F.tipo := inteiro
+    senão
+      F.tipo := float
+  senão se F.tipo = logico && F1.tipo != logico
+    ERRO
+  senão se F.tipo = inteiro && F1.tipo != inteiro
+    ERRO
+}
+
+(14) { T.tipo := F.tipo }
+
+(15) {
+  se ExpS.flag_negativo = verdadeiro && (T.tipo != inteiro && T.tipo != real)
+    ERRO
+}
+
+(16) {
+  se T.tipo != inteiro && T.tipo != real
+    ERRO
+  senão 
+    T.flag_adicao := verdadeiro
+}
+
+(17) {
+  se T.tipo != inteiro && T.tipo != real
+    ERRO
+  senão 
+    T.flag_subtracao := verdadeiro
+}
+
+(18) {
+  se T.tipo != logico
+    ERRO
+}
+
+(19) {
+  se T.flag_adicao || T.flag_subtracao
+    se T1.tipo != inteiro && T1.tipo != real
+      ERRO
+    senão se T.tipo = inteiro && T1.tipo = inteiro
+      T.tipo := inteiro
+    senão 
+      T.tipo := real
+  senão se T.tipo = logico && T1.tipo != logico
+    ERRO
+}
+
+(20) { ExpS.tipo := T.tipo }
+
+(22) {
+  se ExpS.tipo = caractere && ExpS1.tipo != caractere
+    ERRO
+  senão se ExpS.tipo = string && ExpS1.tipo != string
+    ERRO 
+  senão se (ExpS.tipo == inteiro || ExpS.tipo == real) && (ExpS.tipo1 != inteiro && ExpS1.tipo != real)
+    ERRO
+  senão se (ExpS1.tipo != inteiro && ExpS1.tipo != real) && (Exp.tipo = inteiro || Exp.tipo = real)
+    ERRO
+  senão 
+    ExpS.tipo := logico
+}
+
+(23) { Exp.tipo := ExpS.tipo }
+
+(24) {
+  se Exp.tipo != logico
+    ERRO
+}
+
+(25) {
+  se id.classe = constante
+    ERRO
+  senão se id.classe = classe_nula
+    ERRO
+}
+
+(26) {
+  se Exp.tipo != inteiro
+    ERRO
+  senão 
+    id.is_char_array := verdadeiro
+}
+
+(27) {
+  se id.tipo = string
+    se id.is_char_array
+      se Exp.tipo != caractere
         ERRO
-    senão F.tipo := id.tipo}
-(6) {se id.tipo != string
-        ERRO}
-(7) {se Exp.tipo := inteiro
-        F.tipo := caractere
-     senão ERRO}
-(8) {se F1.tipo != logico
+    senão se Exp.tipo != string
         ERRO
-     senão F.tipo := F1.tipo}
-(9) {se F.tipo != inteiro && F.tipo != real
+  senão se id.tipo = caractere && Exp.tipo != caractere
+    ERRO
+  senão se id.tipo = inteiro && Exp.tipo != inteiro
+    ERRO
+  senão se id.tipo = real
+    se Exp.tipo != inteiro && Exp.tipo != real
         ERRO
-     senão F.flag_divisao := verdadeiro}
-(10) {se F.tipo != inteiro && F.tipo != real
+}
+
+(28) {
+  se Exp.tipo = logico
+    ERRO
+}
+
+(29) {
+  se id.classe = classe_nula
+    id.classe := constante
+  senão ERRO
+}
+
+(30) {
+  se Dec.flag_negativo
+    se constante.tipo != inteiro && constante.tipo != real
         ERRO
-     senão F.flag_multiplicacao := verdadeiro}
-(11) {se F.tipo != logico
-        ERRO}
-(12) {se F.tipo != inteiro
-        ERRO}
-(13) {se F.flag_divisao || F.flag_multiplicacao
-        se F1.tipo != inteiro && F1.tipo != real
-            ERRO
-        senão se F.flag_divisao
-            F.tipo := real
-        senão se F.tipo = inteiro && F1.tipo = inteiro
-            F.tipo := inteiro
-        senão F.tipo := float
-      senão se F.tipo = logico && F1.tipo != logico
-        ERRO
-      senão se F.tipo = inteiro && F1.tipo != inteiro
-        ERRO}
-(14) {T.tipo := F.tipo}
-(15) {se ExpS.flag_negativo = verdadeiro && (T.tipo != inteiro && T.tipo != real)
-        ERRO}
-(16) {se T.tipo != inteiro && T.tipo != real
-        ERRO
-      senão T.flag_adicao := verdadeiro}
-(17) {se T.tipo != inteiro && T.tipo != real
-        ERRO
-      senão T.flag_subtracao := verdadeiro}
-(18) {se T.tipo != logico
-        ERRO}
-(19) {se T.flag_adicao || T.flag_subtracao
-        se T1.tipo != inteiro && T1.tipo != real
-            ERRO
-        senão se T.tipo = inteiro && T1.tipo = inteiro
-            T.tipo := inteiro
-        senão T.tipo := real
-      senão se T.tipo = logico && T1.tipo != logico
-        ERRO}
-(20) {ExpS.tipo := T.tipo}
-(22) {se ExpS.tipo = caractere && ExpS1.tipo != caractere
-        ERRO
-      senão se ExpS.tipo = string && ExpS1.tipo != string
-        ERRO 
-      senão se (ExpS.tipo == inteiro || ExpS.tipo == real) && (ExpS.tipo1 != inteiro && ExpS1.tipo != real)
-        ERRO
-      senão se (ExpS1.tipo != inteiro && ExpS1.tipo != real) && (Exp.tipo = inteiro || Exp.tipo = real)
-        ERRO
-      senão ExpS.tipo := logico}
-(23) {Exp.tipo := ExpS.tipo}
-(24) {se Exp.tipo != logico
-        ERRO}
-(25) {se id.classe = constante
-        ERRO
-      senão se id.classe = classe_nula
-        ERRO}
-(26) {se Exp.tipo != inteiro
-        ERRO
-      senão id.is_char_array := verdadeiro}
-(27) {se id.tipo = string
-        se id.is_char_array
-            se Exp.tipo != caractere
-                ERRO
-        senão se Exp.tipo != string
-            ERRO
-      senão se id.tipo = caractere && Exp.tipo != caractere
-        ERRO
-      senão se id.tipo = inteiro && Exp.tipo != inteiro
-        ERRO
-      senão se id.tipo = real
-        se Exp.tipo != inteiro && Exp.tipo != real
-            ERRO}
-(28) {se Exp.tipo = logico
-        ERRO}
-(29) {se id.classe = classe_nula
-        id.classe := constante
-      senão ERRO}
-(30) {se Dec.flag_negativo
-        se constante.tipo != inteiro && constante.tipo != real
-            ERRO
-        senão se constante.tipo = inteiro
-            id.tipo := inteiro
-        senão id.tipo := real
-      senão se constante.tipo = inteiro
+    senão se constante.tipo = inteiro
         id.tipo := inteiro
-      senão se constante.tipo = real
-        id.tipo := real
-      senão se constante.tipo = string
-        id.tipo := string
-      senão se constante.tipo = caractere
-        id.tipo := caractere
-      senão se constante.tipo = logico
-        id.tipo := logico
-      senão ERRO}
-(31) {aux.tipo := inteiro}
-(32) {aux.tipo := real}
-(33) {aux.tipo := caractere}
-(34) {aux.tipo := string}
-(35) {se id.classe = classe_nula
-        id.classe := variavel, id.tipo := aux.tipo
-      senão ERRO}
-(36) {id.tipo != inteiro && id.tipo != real
-        ERRO
-      senão Dec.flag_negativo := verdadeiro}
-(37) {se Dec.flag_negativo && (constante.tipo != inteiro && constante.tipo != real)
-        ERRO
-      senão se id.tipo = real
-        se constante.tipo != inteiro && constante.tipo != real
-            ERRO
-        senão se id.tipo != constante.tipo
-            ERRO}
-(38) {se id.classe = classe_nula
-        id.classe := variavel, id.tipo := logico
-      senão ERRO}
-(39) {ExpS.flag_negativo = verdadeiro}
-(40) {Dec.flag_negativo = verdadeiro}
+    senão id.tipo := real
+  senão se constante.tipo = inteiro
+    id.tipo := inteiro
+  senão se constante.tipo = real
+    id.tipo := real
+  senão se constante.tipo = string
+    id.tipo := string
+  senão se constante.tipo = caractere
+    id.tipo := caractere
+  senão se constante.tipo = logico
+    id.tipo := logico
+  senão 
+    ERRO
+}
+
+(31) { aux.tipo := inteiro }
+
+(32) { aux.tipo := real }
+
+(33) { aux.tipo := caractere }
+
+(34) { aux.tipo := string }
+
+(35) {
+  se id.classe = classe_nula
+    id.classe := variavel, id.tipo := aux.tipo
+  senão 
+    ERRO
+}
+
+(36) {
+  Se id.tipo != inteiro && id.tipo != real
+    ERRO
+  senão 
+    Dec.flag_negativo := verdadeiro
+}
+
+(37) {
+  se Dec.flag_negativo && (constante.tipo != inteiro && constante.tipo != real)
+    ERRO
+  senão se id.tipo = real
+    se constante.tipo != inteiro && constante.tipo != real
+      ERRO
+    senão se id.tipo != constante.tipo
+      ERRO
+}
+
+(38) {
+  se id.classe = classe_nula
+    id.classe := variavel, id.tipo := logico
+  senão 
+    ERRO
+}
+
+(39) { ExpS.flag_negativo = verdadeiro }
+
+(40) { Dec.flag_negativo = verdadeiro }
