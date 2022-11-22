@@ -1,0 +1,103 @@
+Esquema de Tradução
+
+OBS: Para simplificar, a notação [x] significa [qword M+x]
+
+(GC1) {
+  F.end = NovoTemp
+  'mov eax, const.lex'
+  'mov [F.end], eax'
+}
+
+(GC2) {
+  F.end = NovoTemp
+
+  Se Exp.tipo == float entao
+    'movss eax, [Exp.end]'
+  Senao
+    'mov eax, [Exp.end]'
+
+  Se F.tipo == inteiro entao
+    converte 'eax' para inteiro
+    'mov [F.end], eax'
+  Senao
+    converte 'eax' para float
+    'movss [F.end], eax'
+}
+
+
+(GC3) { F.end = Exp.end }
+
+(GC4) { F.end = id.end }
+
+(GC5) {
+  F.end = NovoTemp
+  'mov rsi, Exp.end'
+  'mov rax, 0'
+  'add rax, rsi'
+  'mov eax, [rsi]'
+  'mov [F.end], eax'
+}
+
+(GC6) {
+  F.end = NovoTemp
+  'mov eax, [F1.end]'
+  'neg eax'
+  'mov [F.end], eax'
+}
+
+(GC7) { T.end = F.end }
+
+(GC8) {
+  'mov eax, [T.end]'
+  'mov ebx, [F1.end]'
+
+  switch (T.operador)
+    case 'divisao':
+      ...
+    case 'multiplicacao':
+      ...
+    case 'and':
+      ...
+    case 'mod':
+      ...
+}
+
+(GC9) {
+  Se ExpS.flag_negativo entao
+    ExpS.end = NovoTemp
+    Se T.tipo == inteiro entao
+        'mov eax, [T.end]'
+        'neg eax'
+        'mov [ExpS.end], eax'
+    Senao
+        'movss xmm0, [T.end]'
+        'mov eax, -1'
+        'cvtsi2ss xmm1, eax'
+        'mulss xmm0, xmm1'
+        'movss [ExpS.end], xmm0'
+  Senao
+    ExpS.end = T.end
+}
+
+(GC10) {
+  'mov eax, [ExpS.end]'
+  'mov ebx, [T1.end]'
+
+  Se ExpS.flag_adicao entao
+    ''
+  Senao Se ExpS.flag_subtracao entao
+    ''
+  Senao
+    ''
+
+  Exps.end = NovoTemp
+  'mov [ExpS.end], ecx'
+}
+
+(GC11) { Exp.end = ExpS.end }
+
+(GC12) {
+  
+}
+
+(GC13) {}
