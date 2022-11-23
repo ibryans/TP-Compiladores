@@ -1,3 +1,21 @@
+Gramática:
+
+S:   (GC29) { Dec | Comandos } EOF (GC30)
+Dec:   const id (29) = [- (40)] (constante | true | false) (30) (GC28)
+Dec:   (int (31) | float (32) | char (33) | string (34) ) id (35) (GC24) [:= [- (36)] constante (37) (GC26) (GC27)] {, id (35) (GC24) [:= [- (36) ] constante (37) (GC26) (GC27)]}
+Dec:   boolean id (38) (GC24) [:= (true | false) (GC25)] {, id (38) (GC24) [:= (true | false) (GC25)]} );
+Comandos:   if (GC21) "(" Exp ")" (24) (GC19) (Comandos | "{" {Comandos} "}") [else (GC22) (Comandos | "{" {Comandos} "}")] (GC23)
+Comandos:   while (GC18) "(" Exp ")" (24) (GC19) (Comandos | "{" {Comandos} "}") (GC20)
+Comandos:   [ id (25) (GC13) [ "[" (6) Exp (26) "]" (GC14)] := Exp (27) (GC15)  |  readln "(" id (25) ")" (GC16) |  (write | writeln) (GC13) "(" Exp (28) (GC17) {, Exp (28) } ")" ];
+Exp:   ExpS (GC11) [ (= | != | < | > | <= | >=) ExpS1 (22) (GC12) ] (23)
+ExpS:   [- (39)] T (15) (GC9) { (+ (16) | - (17) | "||" (18) ) T1 (19) (GC10) } (20)
+T:   F (GC7) { ( / (9) | * (10) | && (11) | div (12) | mod (12)) F1 (13) (GC8) } (14)
+F:   constante (1) (GC1)
+F:   (int | float) (2) "(" Exp (3) ")" (GC2)
+F:   "(" Exp (4) ")" (GC3)
+F:   id (5) (GC4) [ "[" (6) Exp (7) "]" (GC5)]
+F:   ! F1 (8) (GC6)
+
 Esquema de Tradução
 
 OBS: Para simplificar, a notação [x] significa [qword M+x]
