@@ -2,102 +2,122 @@ Esquema de Tradução
 
 OBS: Para simplificar, a notação [x] significa [qword M+x]
 
-(GC1) {
-  F.end = NovoTemp
-  'mov eax, const.lex'
-  'mov [F.end], eax'
-}
+(GC1) { F.end = NovoTemp }
+      { move a constante para reg1 }
+      { move reg1 para [F.end] }
 
-(GC2) {
-  F.end = NovoTemp
-
-  Se Exp.tipo == float entao
-    'movss eax, [Exp.end]'
-  Senao
-    'mov eax, [Exp.end]'
-
-  Se F.tipo == inteiro entao
-    converte 'eax' para inteiro
-    'mov [F.end], eax'
-  Senao
-    converte 'eax' para float
-    'movss [F.end], eax'
-}
-
+(GC2) { F.end = NovoTemp }
+      { move o conteudo de Exp para reg1 (mov, movss) }
+      { conforme tipo de F, converte reg1 (para inteiro ou real), e move reg1 para [F.end] }
 
 (GC3) { F.end = Exp.end }
 
 (GC4) { F.end = id.end }
 
-(GC5) {
-  F.end = NovoTemp
-  'mov rsi, Exp.end'
-  'mov rax, 0'
-  'add rax, rsi'
-  'mov eax, [rsi]'
-  'mov [F.end], eax'
-}
+(GC5) { F.end = NovoTemp }
+      { move o endereço de Exp para rsi }
+      { soma o endereço de id com o rsi para pegar o endereço da posição da string}
+      { move [rsi] para reg1 }
+      { move reg1 para [F.end] }
 
-(GC6) {
-  F.end = NovoTemp
-  'mov eax, [F1.end]'
-  'neg eax'
-  'mov [F.end], eax'
-}
+(GC6) { F.end = NovoTemp }
+      { move o conteudo de F1 para reg1, nega esse valor, e move para [F.end] }
 
 (GC7) { T.end = F.end }
 
-(GC8) {
-  'mov eax, [T.end]'
-  'mov ebx, [F1.end]'
+(GC8) { mover o conteudo de T para reg1 }
+      { mover o conteudo de F1 para reg2 }
+      { fazer a conversão de tipos dependendo da operação e dos tipos de F e F1 }
+      { conforme operador, gerar instrução (idiv, divss, imul, mulss) entre reg1 e reg2}
 
-  switch (T.operador)
-    case 'divisao':
-      ...
-    case 'multiplicacao':
-      ...
-    case 'and':
-      ...
-    case 'mod':
-      ...
-}
+(GC9) Se ExpS.flag_negativo
+        { ExpS.end = NovoTemp }
+        { move o conteudo de T para reg1 }
+        { inverte o sinal do valor de reg1 (se for inteiro nega, se for real multiplica por -1) }
+        { move o resultado para [ExpS.end] }
+      Senao
+        { ExpS.end = T.end }  
 
-(GC9) {
-  Se ExpS.flag_negativo entao
-    ExpS.end = NovoTemp
-    Se T.tipo == inteiro entao
-        'mov eax, [T.end]'
-        'neg eax'
-        'mov [ExpS.end], eax'
-    Senao
-        'movss xmm0, [T.end]'
-        'mov eax, -1'
-        'cvtsi2ss xmm1, eax'
-        'mulss xmm0, xmm1'
-        'movss [ExpS.end], xmm0'
-  Senao
-    ExpS.end = T.end
-}
-
-(GC10) {
-  'mov eax, [ExpS.end]'
-  'mov ebx, [T1.end]'
-
-  Se ExpS.flag_adicao entao
-    ''
-  Senao Se ExpS.flag_subtracao entao
-    ''
-  Senao
-    ''
-
-  Exps.end = NovoTemp
-  'mov [ExpS.end], ecx'
-}
+(GC10) { mover o conteudo de ExpS para reg1 }
+       { mover o conteudo de ExpS1 para reg2 }
+       { fazer a conversão de tipos se for necessário }
+       { realizar operação de acordo com o operador (add, sub). No caso do OR (||) simular usando instruções aritméticas (neg, imul) }
+       { ExpS.end = NovoTemp }
+       { mover resultado da operação para [ExpS.end] }
 
 (GC11) { Exp.end = ExpS.end }
 
-(GC12) {
-  
-}
+(GC12) { mover o conteudo de ExpS para reg1 }
+       { mover o conteudo de ExpS1 para reg2 }
+       { compara o conteudo de reg1 com reg2 (cmp, comiss) }
+       { Rot_verdadeiro := NovoRotulo }
+       { gera instrução de jump para o Rot_verdadeiro dependendo do operador: 
+          je (=), jne (<>), jl/jb (<), jg/ja (>), jge/jae (>=), jle/jbe (<=) }
+       { move 0 para eax (expressão é falsa) }
+       { Rot_fim := NovoRotulo }
+       { jump para Rot_fim }
+       { Rot_verdadeiro: }
+       { move 1 para eax (expressão é verdadeira) }
+       { Rot_fim: }
+       { Exp.end = NovoTemp }
+       { move o conteudo de eax para [Exp.end] }
 
-(GC13) {}
+(GC13) { limpa area de temporarios }
+
+(GC14) { }
+
+(GC15) { } 
+
+(GC16) { Cria um buffer para a entrada (NovoTemp de 256 bytes) }
+       { realiza a chamada de leitura de acordo com o sistema operacional }
+       { realiza as conversões de tipo de acordo com o tipo do dado lido e armazena o resultado no reg1 (eax ou xmmm0) }
+       { move o conteudo de reg1 para [id.end] }
+
+(GC17) Se Exp.tipo == string entao
+          { move o tamanho da string e o endereço inicial para registradores, e faz a chamada para saída na tela }
+       Senao
+          { converter o conteudo de Exp e armazenar em um buffer temporário (buffer.end) }
+          { faz a chamada para a saída na tela }
+
+(GC18) { Rot_inicio := NovoTemp e Rot_fim := NovoTemp }
+       { Rot_inicio: }
+
+(GC19) { move o conteudo de Exp para reg1 }
+       { compara reg1 com 1 (verdadeiro) }
+       { jump para Rot_fim se for falso (jne) }
+
+(GC20) { jump para Rot_inicio (jmp) }
+       { Rot_fim: }
+
+(GC21) { Rot_falso := NovoTemp e Rot_fim := NovoTemp }
+
+(GC22) { jump para Rot_fim }
+       { Rot_falso: }
+
+(GC23) { Rot_fim: }
+
+(GC24) { reserva memória de acordo com o tipo do id (dd, db) }
+
+(GC25) { move o conteudo da constante para reg1 }
+       { move reg1 para [id.end] }
+
+(GC26) { move conteudo da constante para reg1 }
+
+(GC27) Se Dec.negativo entao
+          { nega valor do reg1 }
+       { move reg1 para [id.end] }
+
+(GC28) Se Dec.negativo entao 
+          { reserva memória com o sinal de '-' (ex: dd -2) }
+       Senao
+          { reserva memória normalmente (ex: dd 15) }
+       { move o conteudo da constante para reg1 }
+       { move o conteudo de reg1 para [id.end] } 
+
+(GC29) { Inicializa o programa com a sessão de dados (section .data) }
+       { M: } 
+       { reserva de temporários (resb 10000h) }
+       { sessão de código (section .text) }
+       { start do programa (_start:) }
+
+(GC30) { Finaliza o programa com interrupção e chamada do kernel (syscall) }
