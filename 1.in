@@ -2,14 +2,22 @@
 
 int n:=1;
 string nome;
+char letra;
 const MAXITER=10;
 
 write("Digite seu nome: ");
 readln(nome);
 
-float percentual;
-While (n<=MAXITER) {
-  percentual:=float(n)/MAXITER;
-  writeln(percentual,": Ola' ",nome);
-  n:=n+1;
-}
+writeln("Inicial: ", nome[0]);
+
+writeln("");
+
+writeln("Altere a primeira letra do seu nome: ");
+write("> ");
+readln(letra);
+
+writeln("");
+
+nome[0] := letra;
+
+writeln("Nome alterado: ", nome);

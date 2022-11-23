@@ -24,8 +24,10 @@ F:   id (5) (GC4) [ "[" (6) Exp (7) "]" (GC5)]
 F:   ! F1 (8) (GC6)
 
 
+OBS: GC = Gerador de Código. O esquema de tradução está no arquivo "esquema de tradução.txt".
 
-Ações Semânticas
+
+-- Ações Semânticas --
 
 (1) { F.tipo := constante.tipo }
 

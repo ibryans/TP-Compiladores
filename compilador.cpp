@@ -17,71 +17,72 @@
 using namespace std;
 
 /** Tipos de Erro */
-#define INVALID_CHAR         1
-#define INVALID_LEX          2
-#define INVALID_EOF          3
-#define INVALID_TOKEN        4
-#define INVALID_STR_SIZE     5
-#define DUPLICATE_ID         6
-#define INCOMPATIBLE_TYPES   7
-#define INCOMPATIBLE_CLASSES 8
-#define UNDECLARED_ID        9
+#define INVALID_CHAR         111
+#define INVALID_LEX          222
+#define INVALID_EOF          333
+#define INVALID_TOKEN        444
+#define INVALID_STR_SIZE     555
+#define DUPLICATE_ID         666
+#define INCOMPATIBLE_TYPES   777
+#define INCOMPATIBLE_CLASSES 888
+#define UNDECLARED_ID        999
 
 /** Definindo e Enumerando os tokens */
-#define TK_const            1
-#define TK_int              2
-#define TK_char             3
-#define TK_while            4
-#define TK_if               5
-#define TK_float            6
-#define TK_else             7
-#define TK_and              8
-#define TK_or               9
-#define TK_not              10
-#define TK_atrib            11
-#define TK_igualdade        12
-#define TK_abreParentese    13
-#define TK_fechaParentese   14
-#define TK_menor            15
-#define TK_maior            16
-#define TK_diferente        17
-#define TK_maiorIgual       18
-#define TK_menorIgual       19
-#define TK_virgula          20
-#define TK_menos            21
-#define TK_mais             22
-#define TK_asterisco        23
-#define TK_barra            24
-#define TK_pontoevirgula    25
-#define TK_abreChave        26
-#define TK_fechaChave       27
-#define TK_readln           28
-#define TK_div              29
-#define TK_string           30
-#define TK_write            31
-#define TK_writeln          32
-#define TK_mod              33
-#define TK_abreColchete     34
-#define TK_fechaColchete    35
-#define TK_true             36
-#define TK_false            37
-#define TK_boolean          38
-#define TK_id               39
-#define TK_eof              40
+#define TK_CONST            1
+#define TK_INT              2
+#define TK_CHAR             3
+#define TK_WHILE            4
+#define TK_IF               5
+#define TK_FLOAT            6
+#define TK_ELSE             7
+#define TK_AND              8
+#define TK_OR               9
+#define TK_NOT              10
+#define TK_ATRIBUICAO       11
+#define TK_IGUAL            12
+#define TK_ABRE_PARENTESE   13
+#define TK_FECHA_PARENTESE  14
+#define TK_MENOR            15
+#define TK_MAIOR            16
+#define TK_DIFERENTE        17
+#define TK_MAIOR_IGUAL      18
+#define TK_MENOR_IGUAL      19
+#define TK_VIRGULA          20
+#define TK_MENOS            21
+#define TK_MAIS             22
+#define TK_ASTERISCO        23
+#define TK_BARRA            24
+#define TK_PONTO_E_VIRGULA  25
+#define TK_ABRE_CHAVE       26
+#define TK_FECHA_CHAVE      27
+#define TK_READLN           28
+#define TK_DIV              29
+#define TK_STRING           30
+#define TK_WRITE            31
+#define TK_WRITELN          32
+#define TK_MOD              33
+#define TK_ABRE_COLCHETE    34
+#define TK_FECHA_COLCHETE   35
+
+#define TK_VERDADEIRO       36
+#define TK_FALSO            37
+
+#define TK_BOOLEAN          38
+#define TK_ID               39
+#define TK_EOF              40
 
 /** Tipos de Variáveis e Constantes */
-#define tipo_nulo           41
-#define tipo_inteiro        42
-#define tipo_float          43
-#define tipo_caractere      44
-#define tipo_string         45
-#define tipo_boolean        46
+#define TIPO_VAZIO          41
+#define TIPO_INTEIRO        42
+#define TIPO_REAL           43
+#define TIPO_CARACTER       44
+#define TIPO_STRING         45
+#define TIPO_BOOLEAN        46
 
 /** Tipos de classes */
-#define classe_nula         47
-#define classe_variavel     48
-#define classe_constante    49
-
+#define CLASSE_VAZIA        47
+#define CLASSE_VARIAVEL     48
+#define CLASSE_CONSTANTE    49
 
 /** Simbolo inserido na TS */
 struct Simbolo {
@@ -92,10 +93,11 @@ struct Simbolo {
     int endereco;
 };
 
-// string gigante com todo o codigo em assembly gerado
+/** String que irá armazenar todo o codigo em assembly gerado */
 string codigo_asm;
 
-void inicializa_asm(){
+/** Primeiras linhas de código em assembly, para inicializar o programa */
+void inicializa_asm() {
     codigo_asm.append("\nsection .data\t\t; Seção de dados\n");
     codigo_asm.append("M:\t\t\t; Rótulo que marca o início da seção de dados\n");
     codigo_asm.append("resb 10000h\t\t\t; Reserva de temporários\n");
@@ -104,7 +106,8 @@ void inicializa_asm(){
     codigo_asm.append("_start:\t\t\t; Início do programa\n");
 }
 
-void finaliza_asm(){
+/** Últimas linhas de código em assembly, para finalizar o programa*/
+void finaliza_asm() {
     codigo_asm.append("\n; Halt\n");
     codigo_asm.append("mov rax, 60 \t\t; Chamada de saída\n");
     codigo_asm.append("mov rdi, 0 \t\t\t; Código de saída sem erros\n");
@@ -116,99 +119,99 @@ void finaliza_asm(){
     arquivo_asm.close();
 }
 
-// contadores de rotulos, dados e temporarios
+/** contadores de rotulos, dados e temporarios **/
 int rotulo = 1;
-int cont_dados = 65536; // 10000h em decimal
-int cont_temps = 0;
+int count_dados = 65536; // 10000h em decimal
+int count_temporarios = 0;
 
-string novo_rotulo(){
+/** Aumenta o contador de Rótulos e retorna um novo */
+string novo_rotulo() {
     string novo_rotulo = "rotulo" + to_string(rotulo++);
     return novo_rotulo;
 }
 
+/** Aumenta o contador de dados e retorna o próximo endereço */
 int novo_dado(int num_bytes){
-    int endereco = cont_dados;
-    cont_dados += num_bytes;
-
+    int endereco = count_dados;
+    count_dados += num_bytes;
     return endereco;
 }
 
+/** Aumenta o contador de temporários e retorna o próximo endereço */
 int novo_temp(int num_bytes){
-    int endereco = cont_temps;
-    cont_temps+=num_bytes;
-
+    int endereco = count_temporarios;
+    count_temporarios += num_bytes;
     return endereco;
 }
 
+/** Transforma inteiro em Hexadecimal */
 string int2hex(int number){
     ostringstream ss;
     ss << "0x" << hex << number;
-
     return ss.str();
 }
 
 /** Tabela de símbolos, armazenando identificadores e palavras reservadas da linguagem */
 class Tabela_simbolos {
     public:
-        /** Tabela hash que mapeia lexema para token */
+        /** Tabela hash que mapeia lexema para Simbolo */
         unordered_map<string, Simbolo> tab_simbolos; 
-        // int inserir(string, int);
 
         /** Construtor: Insere as palavras reservadas na tabela de simbolos */
         Tabela_simbolos() {
-            inserir("const" , TK_const);
-            inserir("int" , TK_int);
-            inserir("char" , TK_char);
-            inserir("while" , TK_while);
-            inserir("if" , TK_if);
-            inserir("float" , TK_float);
-            inserir("else" , TK_else);
-            inserir("&&" , TK_and);
-            inserir("||" , TK_or);
-            inserir("!" , TK_not);
-            inserir(":=" , TK_atrib);
-            inserir("=" , TK_igualdade);
-            inserir("(" , TK_abreParentese);
-            inserir(")" , TK_fechaParentese);
-            inserir("<" , TK_menor);
-            inserir(">" , TK_maior);
-            inserir("!=" , TK_diferente);
-            inserir(">=" , TK_maiorIgual);
-            inserir("<=" , TK_menorIgual);
-            inserir("," , TK_virgula);
-            inserir("-" , TK_menos);
-            inserir("+", TK_mais);
-            inserir("*" , TK_asterisco);
-            inserir("/" , TK_barra);
-            inserir(";" , TK_pontoevirgula);
-            inserir("{" , TK_abreChave);
-            inserir("}" , TK_fechaChave);
-            inserir("readln" , TK_readln);
-            inserir("div" , TK_div);
-            inserir("string" , TK_string);
-            inserir("write" , TK_write);
-            inserir("writeln" , TK_writeln);
-            inserir("mod" , TK_mod);
-            inserir("[" , TK_abreColchete);
-            inserir("]" , TK_fechaColchete);
-            inserir("true" , TK_true);
-            inserir("false" , TK_false);
-            inserir("boolean" , TK_boolean);
+            inserir("const" , TK_CONST);
+            inserir("int" , TK_INT);
+            inserir("char" , TK_CHAR);
+            inserir("while" , TK_WHILE);
+            inserir("if" , TK_IF);
+            inserir("float" , TK_FLOAT);
+            inserir("else" , TK_ELSE);
+            inserir("&&" , TK_AND);
+            inserir("||" , TK_OR);
+            inserir("!" , TK_NOT);
+            inserir(":=" , TK_ATRIBUICAO);
+            inserir("=" , TK_IGUAL  );
+            inserir("(" , TK_ABRE_PARENTESE);
+            inserir(")" , TK_FECHA_PARENTESE);
+            inserir("<" , TK_MENOR);
+            inserir(">" , TK_MAIOR);
+            inserir("!=" , TK_DIFERENTE);
+            inserir(">=" , TK_MAIOR_IGUAL);
+            inserir("<=" , TK_MENOR_IGUAL);
+            inserir("," , TK_VIRGULA);
+            inserir("-" , TK_MENOS);
+            inserir("+", TK_MAIS);
+            inserir("*" , TK_ASTERISCO);
+            inserir("/" , TK_BARRA);
+            inserir(";" , TK_PONTO_E_VIRGULA);
+            inserir("{" , TK_ABRE_CHAVE);
+            inserir("}" , TK_FECHA_CHAVE);
+            inserir("readln" , TK_READLN);
+            inserir("div" , TK_DIV);
+            inserir("string" , TK_STRING);
+            inserir("write" , TK_WRITE);
+            inserir("writeln" , TK_WRITELN);
+            inserir("mod" , TK_MOD);
+            inserir("[" , TK_ABRE_COLCHETE);
+            inserir("]" , TK_FECHA_COLCHETE);
+            inserir("true" , TK_VERDADEIRO);
+            inserir("false" , TK_FALSO);
+            inserir("boolean" , TK_BOOLEAN);
         }
 
         /**
-         * Insere um [lex,tok] na tabela de símbolos
+         * Insere um [lex, Simbolo] na tabela de símbolos
         */
         void inserir(string lexema, int token) {
             int tipo;
             
             // Se o lexema for um booleano, insere na TS com esse tipo
             if (lexema.compare("true") == 0 || lexema.compare("false") == 0)
-                tipo = tipo_boolean;
+                tipo = TIPO_BOOLEAN;
             else
-                tipo = tipo_nulo;   // Se não, insere como tipo nulo mesmo
+                tipo = TIPO_VAZIO;   // Se não, insere como tipo nulo mesmo
 
-            tab_simbolos.insert(make_pair(lexema, Simbolo{token, tipo, classe_nula, 0, 0}));
+            tab_simbolos.insert(make_pair(lexema, Simbolo{token, tipo, CLASSE_VAZIA, 0, 0}));
         }
 
         /** 
@@ -218,10 +221,10 @@ class Tabela_simbolos {
          */
         Simbolo pesquisar(string lexema) {
             Simbolo s;
-            s.token = TK_id;
+            s.token = TK_ID;
             auto iterator = tab_simbolos.find(lexema);
             if (iterator == tab_simbolos.end()){ // novo identificador, insere na tabela
-                inserir(lexema, TK_id);
+                inserir(lexema, TK_ID);
             } else {    // ja existe na tabela, retorna
                 s = tab_simbolos[lexema];
             }
@@ -409,79 +412,79 @@ string getNextToken() {
                     // demais tokens
                     else if(c == ','){
                         lex = c;
-                        updateRegLex(lex, TK_virgula, -99, 0);
+                        updateRegLex(lex, TK_VIRGULA, -99, 0);
                         estado_atual = estado_final;
                     } 
                     
                     else if(c == '+'){
                         lex = c;
-                        updateRegLex(lex, TK_mais, -99, 0);
+                        updateRegLex(lex, TK_MAIS, -99, 0);
                         estado_atual = estado_final;
                     } 
                     
                     else if(c == '-'){
                         lex = c;
-                        updateRegLex(lex, TK_menos, -99, 0);
+                        updateRegLex(lex, TK_MENOS, -99, 0);
                         estado_atual = estado_final;
                     } 
 
                     else if(c == '='){
                         lex = c;
-                        updateRegLex(lex, TK_igualdade, -99, 0);
+                        updateRegLex(lex, TK_IGUAL  , -99, 0);
                         estado_atual = estado_final;
                     }
                     
                     else if(c == ';'){
                         lex = c;
-                        updateRegLex(lex, TK_pontoevirgula, -99, 0);
+                        updateRegLex(lex, TK_PONTO_E_VIRGULA, -99, 0);
                         estado_atual = estado_final;
                     }
 
                     else if(c == '*'){
                         lex = c;
-                        updateRegLex(lex, TK_asterisco, -99, 0);
+                        updateRegLex(lex, TK_ASTERISCO, -99, 0);
                         estado_atual = estado_final;
                     }                    
                     
                     else if(c == '('){
                         lex = c;
-                        updateRegLex(lex, TK_abreParentese, -99, 0);
+                        updateRegLex(lex, TK_ABRE_PARENTESE, -99, 0);
                         estado_atual = estado_final;
                     } 
                     
                     else if(c == ')'){
                         lex = c;
-                        updateRegLex(lex, TK_fechaParentese, -99, 0);
+                        updateRegLex(lex, TK_FECHA_PARENTESE, -99, 0);
                         estado_atual = estado_final;
                     }
                     
                     else if(c == '['){
                         lex = c;
-                        updateRegLex(lex, TK_abreColchete, -99, 0);
+                        updateRegLex(lex, TK_ABRE_COLCHETE, -99, 0);
                         estado_atual = estado_final;
                     } 
                     
                     else if(c == ']'){
                         lex = c;
-                        updateRegLex(lex, TK_fechaColchete, -99, 0);
+                        updateRegLex(lex, TK_FECHA_COLCHETE, -99, 0);
                         estado_atual = estado_final;
                     } 
                     
                     else if(c == '{'){
                         lex = c;
-                        updateRegLex(lex, TK_abreChave, -99, 0);
+                        updateRegLex(lex, TK_ABRE_CHAVE, -99, 0);
                         estado_atual = estado_final;
                     } 
                     
                     else if(c == '}'){
                         lex = c;
-                        updateRegLex(lex, TK_fechaChave, -99, 0);
+                        updateRegLex(lex, TK_FECHA_CHAVE, -99, 0);
                         estado_atual = estado_final;
                     }
 
                     else if(cin.eof()){
                         lex = "eof";
-                        updateRegLex(lex, TK_eof, -99, 0);
+                        updateRegLex(lex, TK_EOF, -99, 0);
                         estado_atual = estado_final;
                     }
 
@@ -537,7 +540,7 @@ string getNextToken() {
                     }
                     else if (c == '\"') {
                         lex += c;
-                        updateRegLex(lex, TK_const, tipo_string, lex.length()-2);
+                        updateRegLex(lex, TK_CONST, TIPO_STRING, lex.length()-2);
                         estado_atual = estado_final;
                     } 
                     else if (c == '\n') {
@@ -564,7 +567,7 @@ string getNextToken() {
                         // > Devolve o caracter lido
                         if (!cin.eof()) cin.putback(c);
 
-                        updateRegLex(lex, TK_const, tipo_inteiro, 4);
+                        updateRegLex(lex, TK_CONST, TIPO_INTEIRO, 4);
                         estado_atual = estado_final;
                     }
                     break;
@@ -585,7 +588,7 @@ string getNextToken() {
                         // > Devolve o caracter lido
                         if (!cin.eof()) cin.putback(c);
                         
-                        updateRegLex(lex, TK_const, tipo_float, 4);
+                        updateRegLex(lex, TK_CONST, TIPO_REAL, 4);
                         estado_atual = estado_final;
                     }
                     break;
@@ -613,11 +616,11 @@ string getNextToken() {
                     if (c == '=') {
                         lex += c;
                         if (lex[0] == '>')
-                            tok = TK_maiorIgual;
+                            tok = TK_MAIOR_IGUAL;
                         else if (lex[0] == '<')
-                            tok = TK_menorIgual;
+                            tok = TK_MENOR_IGUAL;
                         else if (lex[0] == '!')
-                            tok = TK_diferente;
+                            tok = TK_DIFERENTE;
                         updateRegLex(lex, tok, -99, 0);
                         estado_atual = estado_final;
                     }
@@ -626,11 +629,11 @@ string getNextToken() {
                         if (!cin.eof()) {
                             cin.putback(c);
                             if (lex[0] == '>')
-                                tok = TK_maior;
+                                tok = TK_MAIOR;
                             else if (lex[0] == '<')
-                                tok = TK_menor;
+                                tok = TK_MENOR;
                             else if (lex[0] == '!')
-                                tok = TK_not;
+                                tok = TK_NOT;
                             updateRegLex(lex, tok, -99, 0);
                             estado_atual = estado_final;
                         } else {
@@ -644,7 +647,7 @@ string getNextToken() {
                 case 8:
                     if (c == '&') {
                         lex += c;
-                        updateRegLex(lex, TK_and, -99, 0);
+                        updateRegLex(lex, TK_AND, -99, 0);
                         estado_atual = estado_final;
                     } else {
                         // Erro: Não existe '&' na linguagem
@@ -657,7 +660,7 @@ string getNextToken() {
                 case 9:
                     if (c == '|') {
                         lex += c;
-                        updateRegLex(lex, TK_or, -99, 0);
+                        updateRegLex(lex, TK_OR, -99, 0);
                         estado_atual = estado_final;
                     } else {
                         // Erro: Não existe '|' na linguagem
@@ -670,7 +673,7 @@ string getNextToken() {
                 case 10:
                     if (c == '=') {
                         lex += c;
-                        updateRegLex(lex, TK_atrib, -99, 0);
+                        updateRegLex(lex, TK_ATRIBUICAO, -99, 0);
                         estado_atual = estado_final;
                     } else {
                         // Erro: Não existe só ':' na linguagem
@@ -689,7 +692,7 @@ string getNextToken() {
                         // > Devolve caracter lido
                         if (!cin.eof()) {
                             cin.putback(c);
-                            updateRegLex(lex, TK_barra, -99, 0);
+                            updateRegLex(lex, TK_BARRA, -99, 0);
                             estado_atual = estado_final;
                         } else {
                             erro = true;
@@ -744,7 +747,7 @@ string getNextToken() {
                 case 15:
                     if (c == '\'') {
                         lex += c;
-                        updateRegLex(lex, TK_const, tipo_caractere, 1);
+                        updateRegLex(lex, TK_CONST, TIPO_CARACTER, 1);
                         estado_atual = estado_final;
                     } else {
                         // ERRO -> Não é uma constante char válida
@@ -770,7 +773,7 @@ string getNextToken() {
                     else {
                         // > Devolve caracter lido
                         if (!cin.eof()) cin.putback(c);
-                        updateRegLex(lex, TK_const, tipo_inteiro, 4);
+                        updateRegLex(lex, TK_CONST, TIPO_INTEIRO, 4);
                         estado_atual = estado_final;
                     }
                     break;
@@ -794,7 +797,7 @@ string getNextToken() {
                 case 18:
                     if (isNumber(c) || (c >= 65 && c <= 70) || (c >= 97 && c <= 102)){
                         lex += c;
-                        updateRegLex(lex, TK_const, tipo_caractere, 1);
+                        updateRegLex(lex, TK_CONST, TIPO_CARACTER, 1);
                         estado_atual = estado_final;
                     } else {
                         // ERRO -> não é um lexema válido (sem o ultimo número)
@@ -806,6 +809,7 @@ string getNextToken() {
                     }
                     break;
 
+                // Se não entrar em nenhum dos casos, não é um lexema válido para a linguagem
                 default:
                     lex += c;
                     erro = true;
@@ -813,6 +817,8 @@ string getNextToken() {
             }
 
         }
+
+        // Caractere inválido
         else {
             erro = true;
             showError(INVALID_CHAR, lex);
@@ -825,7 +831,7 @@ string getNextToken() {
         return lex;
 }
 
-/* Analisador Sintatico */
+/** Analisador Sintatico **/
 
 // Assinatura dos procedimentos
 void S();
@@ -840,11 +846,11 @@ void F(int*, int*, int*);
 void casaToken(int token) {
     if (token == registroLexico.token) {
         // pega proximo token apenas se nao eh fim do arquivo
-        if (token != TK_eof)
+        if (token != TK_EOF)
             getNextToken();
     }
     else {  // Não era o token esperado, mostrar erro.
-        if (registroLexico.token == TK_eof)
+        if (registroLexico.token == TK_EOF)
             showError(INVALID_EOF, "");
         else
             showError(INVALID_TOKEN, registroLexico.lexema);
@@ -857,19 +863,19 @@ void casaToken(int token) {
 */
 void S(){
     // Enquanto token pertencer ao first de Dec ou Comandos
-    while ( registroLexico.token == TK_int || registroLexico.token == TK_float || registroLexico.token == TK_char || registroLexico.token == TK_string || registroLexico.token == TK_boolean ||
-            registroLexico.token == TK_const || registroLexico.token == TK_id || registroLexico.token == TK_readln || registroLexico.token == TK_write || registroLexico.token == TK_writeln ||
-            registroLexico.token == TK_if || registroLexico.token == TK_while || registroLexico.token == TK_pontoevirgula){
+    while ( registroLexico.token == TK_INT || registroLexico.token == TK_FLOAT || registroLexico.token == TK_CHAR || registroLexico.token == TK_STRING || registroLexico.token == TK_BOOLEAN ||
+            registroLexico.token == TK_CONST || registroLexico.token == TK_ID || registroLexico.token == TK_READLN || registroLexico.token == TK_WRITE || registroLexico.token == TK_WRITELN ||
+            registroLexico.token == TK_IF || registroLexico.token == TK_WHILE || registroLexico.token == TK_PONTO_E_VIRGULA){
                 
                 // first de Dec
-                if(registroLexico.token == TK_int || registroLexico.token == TK_float || registroLexico.token == TK_char || registroLexico.token == TK_string || registroLexico.token == TK_boolean || registroLexico.token == TK_const){
+                if(registroLexico.token == TK_INT || registroLexico.token == TK_FLOAT || registroLexico.token == TK_CHAR || registroLexico.token == TK_STRING || registroLexico.token == TK_BOOLEAN || registroLexico.token == TK_CONST){
                     Dec();
                 }
                 else Comandos();
     }// fim while
 
     // fim do programa
-    casaToken(TK_eof);
+    casaToken(TK_EOF);
 }// fim S()
 
 
@@ -885,58 +891,58 @@ void Dec() {
     int end_aux;
     
     // const id = [-] (constante | true | false)
-    if(registroLexico.token == TK_const){
-        casaToken(TK_const);
+    if(registroLexico.token == TK_CONST){
+        casaToken(TK_CONST);
         string lex_id = registroLexico.lexema;
-        casaToken(TK_id);
+        casaToken(TK_ID);
 
         Simbolo simb_id = tab_simbolos.pesquisar(lex_id);
 
         // checa se id ja foi declarado
-        if (simb_id.classe == classe_nula) {
-            simb_id.classe = classe_constante; // id ainda nao declarado
+        if (simb_id.classe == CLASSE_VAZIA) {
+            simb_id.classe = CLASSE_CONSTANTE; // id ainda nao declarado
         } 
         // id ja declarado
         else showError(DUPLICATE_ID, lex_id);
 
-        casaToken(TK_igualdade);
+        casaToken(TK_IGUAL  );
 
-        if(registroLexico.token == TK_menos){
-            casaToken(TK_menos);
+        if(registroLexico.token == TK_MENOS){
+            casaToken(TK_MENOS);
             negativo = true;
         }
 
         rl_const = registroLexico;
 
-        if (registroLexico.token == TK_const)
-            casaToken(TK_const);
-        else if (registroLexico.token == TK_true)
-            casaToken(TK_true);
+        if (registroLexico.token == TK_CONST)
+            casaToken(TK_CONST);
+        else if (registroLexico.token == TK_VERDADEIRO)
+            casaToken(TK_VERDADEIRO);
         else
-            casaToken(TK_false);
+            casaToken(TK_FALSO);
 
         if (negativo) {
             // ERRO se a constante nao for um numero
-            if (rl_const.tipo != tipo_inteiro && rl_const.tipo != tipo_float){
+            if (rl_const.tipo != TIPO_INTEIRO && rl_const.tipo != TIPO_REAL){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // atribui tipo ao simbolo
-            else if (rl_const.tipo == tipo_inteiro){
-                simb_id.tipo = tipo_inteiro;
+            else if (rl_const.tipo == TIPO_INTEIRO){
+                simb_id.tipo = TIPO_INTEIRO;
             }
-            else simb_id.tipo = tipo_float;
+            else simb_id.tipo = TIPO_REAL;
         } 
         // nao houve sinal negativo:
-        else if (rl_const.tipo == tipo_inteiro) simb_id.tipo = tipo_inteiro;
-        else if (rl_const.tipo == tipo_float) simb_id.tipo = tipo_float;
-        else if (rl_const.tipo == tipo_string) simb_id.tipo = tipo_string;
-        else if (rl_const.tipo == tipo_caractere) simb_id.tipo = tipo_caractere;
-        else if (rl_const.tipo == tipo_boolean) simb_id.tipo = tipo_boolean;
+        else if (rl_const.tipo == TIPO_INTEIRO) simb_id.tipo = TIPO_INTEIRO;
+        else if (rl_const.tipo == TIPO_REAL) simb_id.tipo = TIPO_REAL;
+        else if (rl_const.tipo == TIPO_STRING) simb_id.tipo = TIPO_STRING;
+        else if (rl_const.tipo == TIPO_CARACTER) simb_id.tipo = TIPO_CARACTER;
+        else if (rl_const.tipo == TIPO_BOOLEAN) simb_id.tipo = TIPO_BOOLEAN;
         else showError(INCOMPATIBLE_TYPES, "");
         
         codigo_asm.append("\nsection .data \t\t; seção de dados\n");
         // id eh numero (int ou float)
-        if (simb_id.tipo == tipo_inteiro || simb_id.tipo == tipo_float){
+        if (simb_id.tipo == TIPO_INTEIRO || simb_id.tipo == TIPO_REAL){
             // adiciona 0 se o numero comecar com .
             if (rl_const.lexema[0] == '.') rl_const.lexema = '0' + rl_const.lexema;
 
@@ -946,7 +952,7 @@ void Dec() {
             end_aux = novo_dado(4); // salva endereco disponivel e atualiza proximo endereco disponivel
         }
         // id eh caractere ou booleano
-        else if (simb_id.tipo == tipo_caractere || simb_id.tipo == tipo_boolean){
+        else if (simb_id.tipo == TIPO_CARACTER || simb_id.tipo == TIPO_BOOLEAN){
             codigo_asm.append("\tdb " + rl_const.lexema + "\t\t; reserva 1 byte e atribui valor\n");
             end_aux = novo_dado(1);
         }
@@ -963,34 +969,34 @@ void Dec() {
     }
    
     // (int | float | char | string) id [:= [-] constante] {, id [:= [-] constante]}
-    else if(registroLexico.token == TK_int || registroLexico.token == TK_float || registroLexico.token == TK_char || registroLexico.token == TK_string){
+    else if(registroLexico.token == TK_INT || registroLexico.token == TK_FLOAT || registroLexico.token == TK_CHAR || registroLexico.token == TK_STRING){
         int end_aux, tipo_id = -999; // auxiliares
         
-        if (registroLexico.token == TK_int){
-            tipo_id = tipo_inteiro;
-            casaToken(TK_int);
+        if (registroLexico.token == TK_INT){
+            tipo_id = TIPO_INTEIRO;
+            casaToken(TK_INT);
         }
-        else if(registroLexico.token == TK_float){
-            tipo_id = tipo_float;
-            casaToken(TK_float);
+        else if(registroLexico.token == TK_FLOAT){
+            tipo_id = TIPO_REAL;
+            casaToken(TK_FLOAT);
         }
-        else if(registroLexico.token == TK_char){
-            tipo_id = tipo_caractere;
-            casaToken(TK_char);
+        else if(registroLexico.token == TK_CHAR){
+            tipo_id = TIPO_CARACTER;
+            casaToken(TK_CHAR);
         }
         else{
-            tipo_id = tipo_string;
-            casaToken(TK_string);
+            tipo_id = TIPO_STRING;
+            casaToken(TK_STRING);
         }
         
         string lex_id = registroLexico.lexema;
-        casaToken(TK_id);
+        casaToken(TK_ID);
 
         Simbolo simb_id = tab_simbolos.pesquisar(lex_id);
         // checa se id ja foi declarado
-        if (simb_id.classe == classe_nula) {
+        if (simb_id.classe == CLASSE_VAZIA) {
             // id ainda nao declarado
-            simb_id.classe = classe_variavel;
+            simb_id.classe = CLASSE_VARIAVEL;
             simb_id.tipo = tipo_id;
 
         }
@@ -1000,12 +1006,12 @@ void Dec() {
         // faz reserva de memoria p/ id declarado
         codigo_asm.append("\nsection .data \t\t; seção de dados\n");
         // id tipo int ou float
-        if (simb_id.tipo == tipo_inteiro || simb_id.tipo == tipo_float) {        
+        if (simb_id.tipo == TIPO_INTEIRO || simb_id.tipo == TIPO_REAL) {        
             end_aux = novo_dado(4);
             codigo_asm.append("\tresd 1 \t\t; reserva 4 bytes\n");
         }
         // id tipo char
-        else if (simb_id.tipo == tipo_caractere) {
+        else if (simb_id.tipo == TIPO_CARACTER) {
             end_aux = novo_dado(1);
             codigo_asm.append("\tresb 1 \t\t; reserva 1 byte\n"); 
         }
@@ -1021,13 +1027,13 @@ void Dec() {
         tab_simbolos.update(lex_id, simb_id); // atualiza TS
 
 
-        if (registroLexico.token == TK_atrib){
-            casaToken(TK_atrib);
+        if (registroLexico.token == TK_ATRIBUICAO){
+            casaToken(TK_ATRIBUICAO);
 
-            if(registroLexico.token == TK_menos){
-                casaToken(TK_menos);
+            if(registroLexico.token == TK_MENOS){
+                casaToken(TK_MENOS);
                 // ERRO se a constante nao for um numero
-                if (simb_id.tipo != tipo_inteiro && simb_id.tipo != tipo_float){
+                if (simb_id.tipo != TIPO_INTEIRO && simb_id.tipo != TIPO_REAL){
                     showError(INCOMPATIBLE_TYPES, "");
                 }
                 negativo = true;
@@ -1035,16 +1041,16 @@ void Dec() {
             // rl_const = {};
             // salva copia do reg lexico antes de casar o prox token
             rl_const = registroLexico;
-            casaToken(TK_const);
+            casaToken(TK_CONST);
 
 
             // ERRO se nao for numero e possuir o token '-'
-            if ((rl_const.tipo != tipo_inteiro && rl_const.tipo != tipo_float) && negativo){
+            if ((rl_const.tipo != TIPO_INTEIRO && rl_const.tipo != TIPO_REAL) && negativo){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // ERRO se o id (simb_id) for float e a constante (rl_const) nao for um numero
-            else if (simb_id.tipo == tipo_float){
-                if (rl_const.tipo != tipo_inteiro && rl_const.tipo != tipo_float){
+            else if (simb_id.tipo == TIPO_REAL){
+                if (rl_const.tipo != TIPO_INTEIRO && rl_const.tipo != TIPO_REAL){
                     showError(INCOMPATIBLE_TYPES, "");
                 }
             }
@@ -1054,7 +1060,7 @@ void Dec() {
             }
 
             // id inteiro
-            if(simb_id.tipo == tipo_inteiro){
+            if(simb_id.tipo == TIPO_INTEIRO){
                 codigo_asm.append("\tmov eax," + rl_const.lexema + " \t\t; carrega a constante em eax\n");
                 if (negativo) {
                     codigo_asm.append("\tneg eax \t\t; inverte sinal de eax\n");
@@ -1062,7 +1068,7 @@ void Dec() {
                 codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "],eax \t\t; id recebe o valor da constante\n");
             }
             // id float
-            else if(simb_id.tipo == tipo_float){
+            else if(simb_id.tipo == TIPO_REAL){
                 codigo_asm.append("\nsection .data \t\t; seção de dados\n");
                 // adiciona 0 se o numero comecar com .
                 if (rl_const.lexema[0] == '.') rl_const.lexema = '0' + rl_const.lexema;
@@ -1077,7 +1083,7 @@ void Dec() {
                 codigo_asm.append("\tmovss [qword M+" + int2hex(simb_id.endereco) + "],xmm0 \t\t; id recebe o valor da constante\n");
             }
             // id char
-            else if (simb_id.tipo == tipo_caractere){
+            else if (simb_id.tipo == TIPO_CARACTER){
                 codigo_asm.append("\tmov al," + rl_const.lexema + " \t\t; carrega a constante em eax\n");
                 codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "], al \t\t; id recebe o valor da constante\n");
             }
@@ -1105,17 +1111,17 @@ void Dec() {
 
         }// fim if
         
-        while(registroLexico.token == TK_virgula){
-            casaToken(TK_virgula);
+        while(registroLexico.token == TK_VIRGULA){
+            casaToken(TK_VIRGULA);
             lex_id = registroLexico.lexema;
-            casaToken(TK_id);
+            casaToken(TK_ID);
 
             simb_id = tab_simbolos.pesquisar(lex_id);
 
             // checa se id ja foi declarado
-            if (simb_id.classe == classe_nula) {
+            if (simb_id.classe == CLASSE_VAZIA) {
                 // id ainda nao declarado
-                simb_id.classe = classe_variavel;
+                simb_id.classe = CLASSE_VARIAVEL;
                 simb_id.tipo = tipo_id;
                 tab_simbolos.update(lex_id, simb_id); // atualiza TS
             } 
@@ -1125,12 +1131,12 @@ void Dec() {
             // faz reserva de memoria p/ id declarado
             codigo_asm.append("\nsection .data \t\t; seção de dados\n");
             // id tipo int ou float
-            if (simb_id.tipo == tipo_inteiro || simb_id.tipo == tipo_float) {        
+            if (simb_id.tipo == TIPO_INTEIRO || simb_id.tipo == TIPO_REAL) {        
                 end_aux = novo_dado(4);
                 codigo_asm.append("\tresd 1 \t\t; reserva 4 bytes\n");
             }
             // id tipo char
-            else if (simb_id.tipo == tipo_caractere) {
+            else if (simb_id.tipo == TIPO_CARACTER) {
                 end_aux = novo_dado(1);
                 codigo_asm.append("\tresb 1 \t\t; reserva 1 byte\n"); 
             }
@@ -1147,14 +1153,14 @@ void Dec() {
 
 
             negativo = false;
-            if(registroLexico.token == TK_atrib){
-                casaToken(TK_atrib);
+            if(registroLexico.token == TK_ATRIBUICAO){
+                casaToken(TK_ATRIBUICAO);
 
-                if (registroLexico.token == TK_menos){ 
-                    casaToken(TK_menos);
+                if (registroLexico.token == TK_MENOS){ 
+                    casaToken(TK_MENOS);
 
                     // ERRO se id nao for numerico
-                    if (simb_id.tipo != tipo_inteiro && simb_id.tipo != tipo_float){
+                    if (simb_id.tipo != TIPO_INTEIRO && simb_id.tipo != TIPO_REAL){
                         showError(INCOMPATIBLE_TYPES, "");
                     }
                     negativo = true;
@@ -1162,15 +1168,15 @@ void Dec() {
 
                 // copia reglex
                 rl_const = registroLexico;
-                casaToken(TK_const);
+                casaToken(TK_CONST);
 
                 // ERRO se nao for numero e possuir o token '-'
-                if ((rl_const.tipo != tipo_inteiro && rl_const.tipo != tipo_float) && negativo){
+                if ((rl_const.tipo != TIPO_INTEIRO && rl_const.tipo != TIPO_REAL) && negativo){
                     showError(INCOMPATIBLE_TYPES, "");
                 }
                 // ERRO se o id (simb_id) for float e a constante (rl_const) nao for um numero
-                else if (simb_id.tipo == tipo_float){
-                    if (rl_const.tipo != tipo_inteiro && rl_const.tipo != tipo_float){
+                else if (simb_id.tipo == TIPO_REAL){
+                    if (rl_const.tipo != TIPO_INTEIRO && rl_const.tipo != TIPO_REAL){
                         showError(INCOMPATIBLE_TYPES, "");
                     }
                 }
@@ -1180,7 +1186,7 @@ void Dec() {
                 }
 
                 // id inteiro
-                if(simb_id.tipo == tipo_inteiro){
+                if(simb_id.tipo == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax," + rl_const.lexema + " \t\t; carrega a constante em eax\n");
                     if (negativo) {
                         codigo_asm.append("\tneg eax \t\t; inverte sinal de eax\n");
@@ -1188,7 +1194,7 @@ void Dec() {
                     codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "],eax \t\t; id recebe o valor da constante\n");
                 }
                 // id float
-                else if(simb_id.tipo == tipo_float){
+                else if(simb_id.tipo == TIPO_REAL){
                     codigo_asm.append("\nsection .data \t\t; seção de dados\n");
                     // adiciona 0 se o numero comecar com .
                     if (rl_const.lexema[0] == '.') rl_const.lexema = '0' + rl_const.lexema;
@@ -1202,7 +1208,7 @@ void Dec() {
                     codigo_asm.append("\tmovss [qword M+" + int2hex(simb_id.endereco) + "],xmm0 \t\t; id recebe o valor da constante\n");
                 }
                 // id char
-                else if (simb_id.tipo == tipo_caractere){
+                else if (simb_id.tipo == TIPO_CARACTER){
                     codigo_asm.append("\tmov al," + rl_const.lexema + " \t\t; carrega a constante em eax\n");
                     codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "], al \t\t; id recebe o valor da constante\n");
                 }
@@ -1233,18 +1239,18 @@ void Dec() {
     
     // boolean id [:= (true | false)] {, id [:= (true | false)]}
     else {
-        casaToken(TK_boolean);
+        casaToken(TK_BOOLEAN);
         string lex_id = registroLexico.lexema;
-        casaToken(TK_id);
+        casaToken(TK_ID);
         // guarda o simbolo da TS
         Simbolo simb_id = tab_simbolos.pesquisar(lex_id);
 
         /* (38) */
         // checa se id ja foi declarado
-        if (simb_id.classe == classe_nula){
+        if (simb_id.classe == CLASSE_VAZIA){
             // id ainda nao declarado
-            simb_id.classe = classe_variavel;
-            simb_id.tipo = tipo_boolean;
+            simb_id.classe = CLASSE_VARIAVEL;
+            simb_id.tipo = TIPO_BOOLEAN;
 
         }
         // id ja declarado
@@ -1260,15 +1266,15 @@ void Dec() {
         simb_id.tamanho = 0;
         tab_simbolos.update(lex_id, simb_id); // atualiza TS
 
-        if(registroLexico.token == TK_atrib){
-            casaToken(TK_atrib);
+        if(registroLexico.token == TK_ATRIBUICAO){
+            casaToken(TK_ATRIBUICAO);
             rl_const = registroLexico;
 
-            if (registroLexico.token == TK_true){
-                casaToken(TK_true);
+            if (registroLexico.token == TK_VERDADEIRO){
+                casaToken(TK_VERDADEIRO);
             }
-            else if(registroLexico.token == TK_false){ 
-                casaToken(TK_false);
+            else if(registroLexico.token == TK_FALSO){ 
+                casaToken(TK_FALSO);
             }
             else{
                 showError(INCOMPATIBLE_TYPES, "");
@@ -1279,18 +1285,18 @@ void Dec() {
         }
 
 
-        while(registroLexico.token == TK_virgula) {
-            casaToken(TK_virgula);
+        while(registroLexico.token == TK_VIRGULA) {
+            casaToken(TK_VIRGULA);
             string lex_id = registroLexico.lexema;
-            casaToken(TK_id);
+            casaToken(TK_ID);
             // guarda simbolo da TS
             Simbolo simb_id = tab_simbolos.pesquisar(lex_id);
 
             // checa se id ja foi declarado
-            if (simb_id.classe == classe_nula){
+            if (simb_id.classe == CLASSE_VAZIA){
                 // id ainda nao declarado
-                simb_id.classe = classe_variavel;
-                simb_id.tipo = tipo_boolean;
+                simb_id.classe = CLASSE_VARIAVEL;
+                simb_id.tipo = TIPO_BOOLEAN;
                 tab_simbolos.update(lex_id, simb_id); // atualiza TS
             }
             // id ja declarado
@@ -1306,14 +1312,14 @@ void Dec() {
             simb_id.tamanho = 0;
             tab_simbolos.update(lex_id, simb_id); // atualiza TS
 
-            if(registroLexico.token == TK_atrib){
-                casaToken(TK_atrib);
+            if(registroLexico.token == TK_ATRIBUICAO){
+                casaToken(TK_ATRIBUICAO);
                 rl_const = registroLexico;
-                if (registroLexico.token == TK_true){
-                    casaToken(TK_true);
+                if (registroLexico.token == TK_VERDADEIRO){
+                    casaToken(TK_VERDADEIRO);
                 }
-                else if(registroLexico.token == TK_false){ 
-                    casaToken(TK_false);
+                else if(registroLexico.token == TK_FALSO){ 
+                    casaToken(TK_FALSO);
                 }
                 else{
                     showError(INCOMPATIBLE_TYPES, "");
@@ -1326,7 +1332,7 @@ void Dec() {
     }
 
     // ????
-    casaToken(TK_pontoevirgula);
+    casaToken(TK_PONTO_E_VIRGULA);
 }// fim Dec()
 
 /* Procedimento Comandos
@@ -1339,21 +1345,21 @@ void Comandos(){
     int tipo_Exp, tamanho_Exp, end_Exp;
 
     // while e if
-    if (registroLexico.token == TK_if || registroLexico.token == TK_while){
+    if (registroLexico.token == TK_IF || registroLexico.token == TK_WHILE){
 
         // if "("Exp")" ( Comandos | "{" {Comandos} "}" ) [ else ( Comandos | "{" {Comandos} "}" ) ]
-        if (registroLexico.token == TK_if){
-            casaToken(TK_if);
-            casaToken(TK_abreParentese);
+        if (registroLexico.token == TK_IF){
+            casaToken(TK_IF);
+            casaToken(TK_ABRE_PARENTESE);
             string rot_falso = novo_rotulo();
             string rot_fim = novo_rotulo();
             // limpa area de temporarios
-            cont_temps = 0;
+            count_temporarios = 0;
             Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
-            casaToken(TK_fechaParentese);
+            casaToken(TK_FECHA_PARENTESE);
 
             // ERRO se o tipo n for logico
-            if (tipo_Exp != tipo_boolean){
+            if (tipo_Exp != TIPO_BOOLEAN){
                 showError(INCOMPATIBLE_TYPES, "");
             }
 
@@ -1361,16 +1367,16 @@ void Comandos(){
             codigo_asm.append("\tcmp eax,1 \t\t; faz o teste\n");
             codigo_asm.append("\tjne " + rot_falso + "\t\t; se teste deu falso, jump p/ rot_falso\n");
             
-            if(registroLexico.token == TK_abreChave){
-                casaToken(TK_abreChave);
+            if(registroLexico.token == TK_ABRE_CHAVE){
+                casaToken(TK_ABRE_CHAVE);
                 // Enquanto token pertencer ao first de Comandos()
-                while ( registroLexico.token == TK_if || registroLexico.token == TK_while ||
-                        registroLexico.token == TK_id || registroLexico.token == TK_readln ||
-                        registroLexico.token == TK_write || registroLexico.token == TK_writeln ||
-                        registroLexico.token == TK_pontoevirgula){
+                while ( registroLexico.token == TK_IF || registroLexico.token == TK_WHILE ||
+                        registroLexico.token == TK_ID || registroLexico.token == TK_READLN ||
+                        registroLexico.token == TK_WRITE || registroLexico.token == TK_WRITELN ||
+                        registroLexico.token == TK_PONTO_E_VIRGULA){
                             Comandos();                            
                 }
-                casaToken(TK_fechaChave);
+                casaToken(TK_FECHA_CHAVE);
                 codigo_asm.append("\tjmp " + rot_fim + "\t\t; jump p/ rot_fim (fim do if)\n");
             } else{
                 Comandos();
@@ -1379,17 +1385,17 @@ void Comandos(){
 
             codigo_asm.append(rot_falso + ": \t\t; rot_falso\n");
 
-            if(registroLexico.token == TK_else){
-                if(registroLexico.token == TK_abreChave){
-                    casaToken(TK_abreChave);
+            if(registroLexico.token == TK_ELSE){
+                if(registroLexico.token == TK_ABRE_CHAVE){
+                    casaToken(TK_ABRE_CHAVE);
                     // Enquanto token pertencer ao first de Comandos()
-                    while ( registroLexico.token == TK_if || registroLexico.token == TK_while ||
-                            registroLexico.token == TK_id || registroLexico.token == TK_readln ||
-                            registroLexico.token == TK_write || registroLexico.token == TK_writeln ||
-                            registroLexico.token == TK_pontoevirgula){
+                    while ( registroLexico.token == TK_IF || registroLexico.token == TK_WHILE ||
+                            registroLexico.token == TK_ID || registroLexico.token == TK_READLN ||
+                            registroLexico.token == TK_WRITE || registroLexico.token == TK_WRITELN ||
+                            registroLexico.token == TK_PONTO_E_VIRGULA){
                                 Comandos();                            
                     }
-                    casaToken(TK_fechaChave);
+                    casaToken(TK_FECHA_CHAVE);
                 } else{
                     Comandos();
                 }// fim if-else
@@ -1400,20 +1406,20 @@ void Comandos(){
 
         // while "("Exp")" ( Comandos | "{" {Comandos} "}" ) 
         else{
-            casaToken(TK_while);
-            casaToken(TK_abreParentese);
+            casaToken(TK_WHILE);
+            casaToken(TK_ABRE_PARENTESE);
 
             string rot_inicio = novo_rotulo();
             string rot_fim = novo_rotulo();
             codigo_asm.append(rot_inicio + ": \t\t; rot_inicio\n");
 
-            cont_temps = 0; // limpa area de temporarios
+            count_temporarios = 0; // limpa area de temporarios
             Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
             
-            casaToken(TK_fechaParentese);
+            casaToken(TK_FECHA_PARENTESE);
             
             // ERRO se o tipo n for logico
-            if (tipo_Exp != tipo_boolean){
+            if (tipo_Exp != TIPO_BOOLEAN){
                 showError(INCOMPATIBLE_TYPES, "");
             } 
 
@@ -1421,16 +1427,16 @@ void Comandos(){
             codigo_asm.append("\tcmp eax,1 \t\t; faz o teste\n");
             codigo_asm.append("\tjne " + rot_fim+ "\t\t; se teste deu falso, jump p/ rot_fim\n");
 
-            if(registroLexico.token == TK_abreChave){
-                casaToken(TK_abreChave);
+            if(registroLexico.token == TK_ABRE_CHAVE){
+                casaToken(TK_ABRE_CHAVE);
                 // Enquanto token pertencer ao first de Comandos()
-                while ( registroLexico.token == TK_if || registroLexico.token == TK_while ||
-                        registroLexico.token == TK_id || registroLexico.token == TK_readln ||
-                        registroLexico.token == TK_write || registroLexico.token == TK_writeln ||
-                        registroLexico.token == TK_pontoevirgula){
+                while ( registroLexico.token == TK_IF || registroLexico.token == TK_WHILE ||
+                        registroLexico.token == TK_ID || registroLexico.token == TK_READLN ||
+                        registroLexico.token == TK_WRITE || registroLexico.token == TK_WRITELN ||
+                        registroLexico.token == TK_PONTO_E_VIRGULA){
                             Comandos();                            
                 }
-                casaToken(TK_fechaChave);
+                casaToken(TK_FECHA_CHAVE);
             } else{
                 Comandos();
             }// fim if-else
@@ -1447,77 +1453,77 @@ void Comandos(){
         string lex_id;
         Simbolo simb_id;
         // id [ "[" Exp "]" ] := Exp
-        if(registroLexico.token == TK_id){
+        if(registroLexico.token == TK_ID){
             bool is_char_array = false;
             int posicao_string;
 
             lex_id = registroLexico.lexema; // guarda lexema do identificador
-            casaToken(TK_id);
+            casaToken(TK_ID);
             simb_id = tab_simbolos.pesquisar(lex_id); // pega o simbolo desse identificador na TS
 
             // checa se id eh constante
-            if (simb_id.classe == classe_constante){
+            if (simb_id.classe == CLASSE_CONSTANTE){
                 showError(INCOMPATIBLE_CLASSES, lex_id);
             }
             // checa se o identificador ja foi declarado
-            else if (simb_id.classe == classe_nula){
+            else if (simb_id.classe == CLASSE_VAZIA){
                 showError(UNDECLARED_ID, lex_id);
             }
 
             // limpa area de temporarios
-            cont_temps = 0;
+            count_temporarios = 0;
             posicao_string = 0;
-            if(registroLexico.token == TK_abreColchete){
-                casaToken(TK_abreColchete);
+            if(registroLexico.token == TK_ABRE_COLCHETE){
+                casaToken(TK_ABRE_COLCHETE);
 
                 // ERRO se o id nao for string
-                if (simb_id.tipo != tipo_string){
+                if (simb_id.tipo != TIPO_STRING){
                     showError(INCOMPATIBLE_TYPES, "");
                 }
 
                 Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
 
                 // ERRO se o indice nao for um numero inteiro
-                if (tipo_Exp != tipo_inteiro){
+                if (tipo_Exp != TIPO_INTEIRO){
                     showError(INCOMPATIBLE_TYPES, "");
                 }
 
                 is_char_array = true;
-                casaToken(TK_fechaColchete);
+                casaToken(TK_FECHA_COLCHETE);
 
                 posicao_string = novo_temp(4);
                 codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega a posicao da string em eax\n");
                 codigo_asm.append("\tmov [qword M+" + int2hex(posicao_string) + "],eax \t\t; carrega eax em um temporario\n");
             }
 
-            casaToken(TK_atrib);
+            casaToken(TK_ATRIBUICAO);
             Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
 
             // checando os tipos de id (simb_id) e Exp (tipo_Exp)
             // se id for string
-            if (simb_id.tipo == tipo_string){
+            if (simb_id.tipo == TIPO_STRING){
                 // se houver indice da string (id[numero]), Exp DEVE ser char:
                 if (is_char_array){
-                    if (tipo_Exp != tipo_caractere){
+                    if (tipo_Exp != TIPO_CARACTER){
                         showError(INCOMPATIBLE_TYPES, "");
                     }
                 }
                 // se Exp n for uma string:
-                else if (tipo_Exp != tipo_string){
+                else if (tipo_Exp != TIPO_STRING){
                     showError(INCOMPATIBLE_TYPES, "");
                 }
             }
             // se id for char e Exp n for char:
-            else if (simb_id.tipo == tipo_caractere && tipo_Exp != tipo_caractere){
+            else if (simb_id.tipo == TIPO_CARACTER && tipo_Exp != TIPO_CARACTER){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // se id for int e Exp nao for int:
-            else if (simb_id.tipo == tipo_inteiro && tipo_Exp != tipo_inteiro){
+            else if (simb_id.tipo == TIPO_INTEIRO && tipo_Exp != TIPO_INTEIRO){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // se id for float e Exp n for numero:
-            else if (simb_id.tipo == tipo_float){
-                if (tipo_Exp != tipo_inteiro && tipo_Exp != tipo_float){
+            else if (simb_id.tipo == TIPO_REAL){
+                if (tipo_Exp != TIPO_INTEIRO && tipo_Exp != TIPO_REAL){
                     showError(INCOMPATIBLE_TYPES, "");
                 }
             }
@@ -1525,19 +1531,19 @@ void Comandos(){
             /* GERAÇÃO DE CÓDIGO */
             // id:=Exp
             // id inteiro, Exp inteiro
-            if (simb_id.tipo == tipo_inteiro){
+            if (simb_id.tipo == TIPO_INTEIRO){
                 codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em eax\n");
                 codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "],eax \t\t; carrega id.end com Exp.end\n");
             }
             // id char, Exp char
-            else if (simb_id.tipo == tipo_caractere){
+            else if (simb_id.tipo == TIPO_CARACTER){
                 codigo_asm.append("\tmov al, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em al\n");
                 codigo_asm.append("\tmov [qword M+" + int2hex(simb_id.endereco) + "], al \t\t; carrega id.end com Exp.end\n");
             }
             // id float
-            else if (simb_id.tipo == tipo_float){
+            else if (simb_id.tipo == TIPO_REAL){
                 // id float, Exp inteiro
-                if (tipo_Exp == tipo_inteiro){
+                if (tipo_Exp == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm0, eax \t\t; converte p/ float e guarda em xmm0\n");
                     codigo_asm.append("\tmovss [qword M+" + int2hex(simb_id.endereco) + "],xmm0 \t\t; carrega id.end com Exp.end\n");
@@ -1551,7 +1557,7 @@ void Comandos(){
             // id string
             else{
                 // id string, recebe um char na posicao Exp
-                if(is_char_array){
+                if(is_char_array) {
                     codigo_asm.append("\tmov rsi,qword M+" + int2hex(simb_id.endereco) + " \t\t; carrega [id.end] (inicio da string) em rsi\n");
                     codigo_asm.append("\tmov rbx,0 \t\t; rbx:=0\n");
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(posicao_string) + "] \t\t; rbx recebe posicao do char\n");
@@ -1580,29 +1586,29 @@ void Comandos(){
         }// fim da producao de atribuicao
         
         // readln "(" id ")"
-        else if(registroLexico.token == TK_readln){
+        else if(registroLexico.token == TK_READLN){
             int end_aux;
             
-            casaToken(TK_readln);
-            casaToken(TK_abreParentese);
+            casaToken(TK_READLN);
+            casaToken(TK_ABRE_PARENTESE);
             lex_id = registroLexico.lexema; // guarda lexema do identificador p/ a busca na TS
-            casaToken(TK_id);
+            casaToken(TK_ID);
 
             simb_id = tab_simbolos.pesquisar(lex_id); // busca na TS
 
             // checa se foi declarado
-            if (simb_id.classe == classe_nula){
+            if (simb_id.classe == CLASSE_VAZIA){
                 showError(UNDECLARED_ID, lex_id);
             }
             // checa se eh uma constante
-            else if (simb_id.classe == classe_constante){
+            else if (simb_id.classe == CLASSE_CONSTANTE){
                 showError(INCOMPATIBLE_CLASSES, lex_id);
             }
 
-            casaToken(TK_fechaParentese);
+            casaToken(TK_FECHA_PARENTESE);
 
             /* GERAÇÃO DE CÓDIGO */
-            cont_temps = 0; // limpa area de temporarios
+            count_temporarios = 0; // limpa area de temporarios
             end_aux = novo_temp(256); // tamanho maximo pois pode ser string
             codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; endereco do buffer\n");
             codigo_asm.append("\tmov rdx, 100h \t\t; tamanho do buffer\n");
@@ -1611,7 +1617,7 @@ void Comandos(){
             codigo_asm.append("\tsyscall \t\t\n");
             
             // ler valor inteiro
-            if(simb_id.tipo == tipo_inteiro){
+            if(simb_id.tipo == TIPO_INTEIRO){
                 codigo_asm.append("\tmov eax, 0 \t\t; acumulador:=0\n");
                 codigo_asm.append("\tmov ebx, 0 \t\t; caractere\n");
                 codigo_asm.append("\tmov ecx, 10 \t\t; base 10\n");
@@ -1653,7 +1659,7 @@ void Comandos(){
                 codigo_asm.append("\tmov [qword M+" +int2hex(simb_id.endereco) + "], eax\t\t; id recebe o novo int\n");
             }
             // ler valor real
-            else if (simb_id.tipo == tipo_float){
+            else if (simb_id.tipo == TIPO_REAL){
                 codigo_asm.append("\tmov rax, 0 \t\t; acumul. parte int.\n");
                 codigo_asm.append("\tsubss xmm0,xmm0 \t\t; acumul. parte frac.\n");
                 codigo_asm.append("\tmov rbx, 0 \t\t; caractere\n");
@@ -1714,12 +1720,12 @@ void Comandos(){
                 codigo_asm.append("\tmovss [qword M+" +int2hex(simb_id.endereco) + "], xmm0\t\t; id recebe o novo float\n");
             }
             // ler valor do tipo caractere
-            else if(simb_id.tipo == tipo_caractere){
+            else if(simb_id.tipo == TIPO_CARACTER){
                 codigo_asm.append("\tmov al, [M+" + int2hex(end_aux) + "] \t\t; carrega char no registrador temporario\n");
                 codigo_asm.append("\tmov [qword M+" +int2hex(simb_id.endereco) + "], al\t\t; id recebe o novo char\n");
             }
             // ler valor tipo boolean
-            else if(simb_id.tipo == tipo_boolean){
+            else if(simb_id.tipo == TIPO_BOOLEAN){
                 codigo_asm.append("\tmov al, [M+" + int2hex(end_aux) + "] \t\t; carrega booleano no registrador temporario\n");
                 codigo_asm.append("\tmov [qword M+" +int2hex(simb_id.endereco) + "], al\t\t; id recebe o novo booleano\n");
             }
@@ -1748,30 +1754,30 @@ void Comandos(){
         } // fim da producao de leitura
         
         // (write | writeln) "(" Exp {, Exp} ")"
-        else if(registroLexico.token == TK_write || registroLexico.token == TK_writeln){
+        else if(registroLexico.token == TK_WRITE || registroLexico.token == TK_WRITELN){
             int end_aux;
             bool writeln = false;
 
-            if(registroLexico.token == TK_write){
-                casaToken(TK_write);
+            if(registroLexico.token == TK_WRITE){
+                casaToken(TK_WRITE);
             }
             else{
-                casaToken(TK_writeln);
+                casaToken(TK_WRITELN);
                 writeln = true;
             }
-            casaToken(TK_abreParentese);
-            cont_temps = 0; // limpa area de temporarios
+            casaToken(TK_ABRE_PARENTESE);
+            count_temporarios = 0; // limpa area de temporarios
             Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
 
             // o tipo nao pode ser logico
-            if (tipo_Exp == tipo_boolean){
+            if (tipo_Exp == TIPO_BOOLEAN){
                 showError(INCOMPATIBLE_TYPES, "");
             }
 
-            while(registroLexico.token == TK_virgula){
-                casaToken(TK_virgula);
+            while(registroLexico.token == TK_VIRGULA){
+                casaToken(TK_VIRGULA);
                 // escrever valor inteiro
-                if(tipo_Exp == tipo_inteiro){
+                if(tipo_Exp == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_Exp) + "] \t\t; inteiro a ser convertido\n");
                     end_aux = novo_temp(256);
                     codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t;end. string ou temp\n");
@@ -1821,7 +1827,7 @@ void Comandos(){
                     codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
                 }
                 // escrever valor real
-                else if(tipo_Exp == tipo_float){
+                else if(tipo_Exp == TIPO_REAL){
                     codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_Exp) + "] \t\t; real a ser convertido\n");
                     end_aux = novo_temp(256);
                     codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t;end. temporário\n");
@@ -1907,25 +1913,25 @@ void Comandos(){
                     codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
                 }
                 // escreve char
-                else if (tipo_Exp == tipo_caractere){
-                    codigo_asm.append("\tmov rax,0 \t\t; zera contador\n");
+                else if (tipo_Exp == TIPO_CARACTER){
                     end_aux = novo_temp(2); // 1 byte a mais p/ quebra de linha
+                    codigo_asm.append("\tmov rcx,0 \t\t; zera contador\n");
 
                     codigo_asm.append("\tmov al, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega char no registrador temporario\n");
                     codigo_asm.append("\tmov [qword M+" +int2hex(end_aux) + "], al\t\t; novo_temp recebe o char\n");
-                    codigo_asm.append("\tmov rax,1 \t\t; cont:=1 byte\n");
+                    codigo_asm.append("\tmov ecx,1 \t\t; cont:=1 byte\n");
 
                     
                     codigo_asm.append("\n;executa interrupção de saída\n\n");
                     
                     codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
-                    codigo_asm.append("\tmov rdx, rax\t\t; tamanho do char\n");
+                    codigo_asm.append("\tmov rdx, rcx\t\t; tamanho do char\n");
                     codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
                     codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
                     codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
                 }
                 // escreve boolean
-                else if(tipo_Exp == tipo_boolean){
+                else if(tipo_Exp == TIPO_BOOLEAN){
                     codigo_asm.append("\tmov rax,0 \t\t; zera contador\n");
                     end_aux = novo_temp(2); // 1 byte a mais p/ quebra de linha
 
@@ -1943,7 +1949,7 @@ void Comandos(){
                     codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
                 }
                 // escreve string
-                else{
+                else {
                     codigo_asm.append("\tmov rcx,0 \t\t; zera contador\n");
                     end_aux = novo_temp(tamanho_Exp+1); // 1 byte a mais p/ quebra de linha
 
@@ -1970,19 +1976,19 @@ void Comandos(){
                     codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
                 }
 
-                cont_temps = 0; // limpa area de temporarios
+                count_temporarios = 0; // limpa area de temporarios
                 Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
 
                 // Exp nao pode ser logico
-                if (tipo_Exp == tipo_boolean){
+                if (tipo_Exp == TIPO_BOOLEAN){
                     showError(INCOMPATIBLE_TYPES, "");
                 }
             }// fim while
 
-            casaToken(TK_fechaParentese);
+            casaToken(TK_FECHA_PARENTESE);
 
             // escrever valor inteiro
-            if(tipo_Exp == tipo_inteiro){
+            if(tipo_Exp == TIPO_INTEIRO){
                 codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_Exp) + "] \t\t; inteiro a ser convertido\n");
                 end_aux = novo_temp(256);
                 codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t;end. string ou temp\n");
@@ -2040,7 +2046,7 @@ void Comandos(){
                 codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
             }
             // escrever valor real
-            else if(tipo_Exp == tipo_float){
+            else if(tipo_Exp == TIPO_REAL){
                 codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_Exp) + "] \t\t; real a ser convertido\n");
                 end_aux = novo_temp(256);
                 codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t;end. temporário\n");
@@ -2131,32 +2137,32 @@ void Comandos(){
                 codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
             }
             // escreve char
-            else if (tipo_Exp == tipo_caractere){
-                codigo_asm.append("\tmov rax,0 \t\t; zera contador\n");
+            else if (tipo_Exp == TIPO_CARACTER){
+                codigo_asm.append("\tmov rcx,0 \t\t; zera contador\n");
                 end_aux = novo_temp(2); // 1 byte a mais p/ quebra de linha
 
                 codigo_asm.append("\tmov al, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega char no registrador temporario\n");
                 codigo_asm.append("\tmov [qword M+" +int2hex(end_aux) + "], al\t\t; novo_temp recebe o char\n");
-                codigo_asm.append("\tmov rax,1 \t\t; cont:=1 byte\n");
+                codigo_asm.append("\tmov ecx,1 \t\t; cont:=1 byte\n");
 
                 if(writeln){
                     codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
-                    codigo_asm.append("\tadd rsi, rax \t\t; soma contador ao inicio\n");
+                    codigo_asm.append("\tadd rsi, rcx \t\t; soma contador ao inicio\n");
                     codigo_asm.append("\tmov al, 0xA \t\t; reg. al recebe quebra de linha\n");
                     codigo_asm.append("\tmov [rsi], al \t\t; quebra de linha no final do char\n");
-                    codigo_asm.append("\tadd rax, 1 \t\t; contador++ p/ n dar pau com a quebra de linha\n");
+                    codigo_asm.append("\tadd rcx, 1 \t\t; contador++ p/ n dar pau com a quebra de linha\n");
                 }
                 
                 codigo_asm.append("\n;executa interrupção de saída\n\n");
                 
                 codigo_asm.append("\tmov rsi, M+" + int2hex(end_aux) + "\t\t; inicio da string\n");
-                codigo_asm.append("\tmov rdx, rax\t\t; tamanho do char\n");
+                codigo_asm.append("\tmov rdx, rcx\t\t; tamanho do char\n");
                 codigo_asm.append("\tmov rax, 1\t\t; chamada para saida\n");
                 codigo_asm.append("\tmov rdi, 1\t\t; saida para tela\n");
                 codigo_asm.append("\tsyscall \t\t; chama o kernel\n");
             }
             // escreve boolean
-            else if(tipo_Exp == tipo_boolean){
+            else if(tipo_Exp == TIPO_BOOLEAN){
                 codigo_asm.append("\tmov rax,0 \t\t; zera contador\n");
                 end_aux = novo_temp(2); // 1 byte a mais p/ quebra de linha
 
@@ -2217,7 +2223,7 @@ void Comandos(){
 
         }// fim da producao de escrita
 
-        casaToken(TK_pontoevirgula);
+        casaToken(TK_PONTO_E_VIRGULA);
     
     }// fim das producoes opcionais
 
@@ -2234,30 +2240,30 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
 
     tipo_ExpS_aux = tipo_ExpS;
     switch(registroLexico.token){
-        case TK_igualdade:
-            casaToken(TK_igualdade);
+        case TK_IGUAL   :
+            casaToken(TK_IGUAL  );
             ExpS(&tipo_ExpS1, &tamanho_ExpS1, &end_ExpS1);
 
             // verifica tipos dos termos a serem comparados
             // char - char
-            if (tipo_ExpS == tipo_caractere && tipo_ExpS1 != tipo_caractere){
+            if (tipo_ExpS == TIPO_CARACTER && tipo_ExpS1 != TIPO_CARACTER){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // string - string
-            else if (tipo_ExpS == tipo_string && tipo_ExpS1 != tipo_string){
+            else if (tipo_ExpS == TIPO_STRING && tipo_ExpS1 != TIPO_STRING){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // numero - numero
-            else if ((tipo_ExpS == tipo_inteiro || tipo_ExpS == tipo_float) && (tipo_ExpS1 != tipo_inteiro && tipo_ExpS1 != tipo_float)){
+            else if ((tipo_ExpS == TIPO_INTEIRO || tipo_ExpS == TIPO_REAL) && (tipo_ExpS1 != TIPO_INTEIRO && tipo_ExpS1 != TIPO_REAL)){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // nao houve erro, atribui tipo correto
-            else tipo_ExpS = tipo_boolean;
+            else tipo_ExpS = TIPO_BOOLEAN;
 
 
             /* GERAÇÃO DE CÓDIGO (=) */
             // ambos operandos sao inteiros
-            if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
+            if(tipo_ExpS_aux == TIPO_INTEIRO && tipo_ExpS1 == TIPO_INTEIRO){
                 codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
                 codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
@@ -2273,9 +2279,9 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
                 codigo_asm.append("\tmov [qword M+" + int2hex(end_ExpS) + "], eax\t\t; guarda resultado\n");
             }
             // pelo menos um operando eh float
-            if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
+            if(tipo_ExpS_aux == TIPO_REAL || tipo_ExpS1 == TIPO_REAL){
                 // ExpS eh inteiro
-                if(tipo_ExpS_aux == tipo_inteiro){
+                if(tipo_ExpS_aux == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ real\n");
                 }
@@ -2285,7 +2291,7 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
                 }
                 
                 // ExpS1 eh inteiro
-                if(tipo_ExpS1 == tipo_inteiro){
+                if(tipo_ExpS1 == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm1, eax \t\t; converte p/ real\n");
                 }
@@ -2309,7 +2315,7 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             }
 
             // ambos operandos sao sgtring
-            if(tipo_ExpS_aux == tipo_string && tipo_ExpS1 == tipo_string){
+            if(tipo_ExpS_aux == TIPO_STRING && tipo_ExpS1 == TIPO_STRING){
 
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=0\n");
                 codigo_asm.append("\tmov ebx,0 \t\t; ebx:=0\n");
@@ -2337,7 +2343,7 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             }
 
             // ambos operandos sao caracteres
-            if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
+            if(tipo_ExpS_aux == TIPO_CARACTER && tipo_ExpS1 == TIPO_CARACTER){
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=0\n");
                 codigo_asm.append("\tmov ebx,0 \t\t; ebx:=0\n");
                 codigo_asm.append("\tmov al, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
@@ -2357,29 +2363,29 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
 
         break;
 
-        case TK_diferente:
-            casaToken(TK_diferente);
+        case TK_DIFERENTE:
+            casaToken(TK_DIFERENTE);
             ExpS(&tipo_ExpS1, &tamanho_ExpS1, &end_ExpS1);
 
             // verifica tipos dos termos a serem comparados
             // char - char
-            if (tipo_ExpS == tipo_caractere && tipo_ExpS1 != tipo_caractere){
+            if (tipo_ExpS == TIPO_CARACTER && tipo_ExpS1 != TIPO_CARACTER){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // string - string
-            else if (tipo_ExpS == tipo_string && tipo_ExpS1 != tipo_string){
+            else if (tipo_ExpS == TIPO_STRING && tipo_ExpS1 != TIPO_STRING){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // numero - numero
-            else if ((tipo_ExpS == tipo_inteiro || tipo_ExpS == tipo_float) && (tipo_ExpS1 != tipo_inteiro && tipo_ExpS1 != tipo_float)){
+            else if ((tipo_ExpS == TIPO_INTEIRO || tipo_ExpS == TIPO_REAL) && (tipo_ExpS1 != TIPO_INTEIRO && tipo_ExpS1 != TIPO_REAL)){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // nao houve erro, atribui tipo correto
-            else tipo_ExpS = tipo_boolean;
+            else tipo_ExpS = TIPO_BOOLEAN;
 
             /* GERAÇÃO DE CÓDIGO (!=) */
             // ambos operandos sao inteiros
-            if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
+            if(tipo_ExpS_aux == TIPO_INTEIRO && tipo_ExpS1 == TIPO_INTEIRO){
                 codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
                 codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
@@ -2395,9 +2401,9 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
                 codigo_asm.append("\tmov [qword M+" + int2hex(end_ExpS) + "], eax\t\t; guarda resultado\n");
             }
             // pelo menos um operando eh float
-            if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
+            if(tipo_ExpS_aux == TIPO_REAL || tipo_ExpS1 == TIPO_REAL){
                 // ExpS eh inteiro
-                if(tipo_ExpS_aux == tipo_inteiro){
+                if(tipo_ExpS_aux == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ real\n");
                 }
@@ -2407,7 +2413,7 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
                 }
 
                 // ExpS1 eh inteiro
-                if(tipo_ExpS1 == tipo_inteiro){
+                if(tipo_ExpS1 == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm1, eax \t\t; converte p/ real\n");
                 }
@@ -2430,7 +2436,7 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
                 codigo_asm.append("\tmov [qword M+" + int2hex(end_ExpS) + "], eax\t\t; carrega ExpS.end\n");
             }
 
-            if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
+            if(tipo_ExpS_aux == TIPO_CARACTER && tipo_ExpS1 == TIPO_CARACTER){
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=0\n");
                 codigo_asm.append("\tmov ebx,0 \t\t; ebx:=0\n");
                 codigo_asm.append("\tmov al, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
@@ -2450,29 +2456,29 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
 
         break;
 
-        case TK_maior:
-            casaToken(TK_maior);
+        case TK_MAIOR:
+            casaToken(TK_MAIOR);
             ExpS(&tipo_ExpS1, &tamanho_ExpS1, &end_ExpS1);
 
             // verifica tipos dos termos a serem comparados
             // char - char
-            if (tipo_ExpS == tipo_caractere && tipo_ExpS1 != tipo_caractere){
+            if (tipo_ExpS == TIPO_CARACTER && tipo_ExpS1 != TIPO_CARACTER){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // string - string
-            else if (tipo_ExpS == tipo_string && tipo_ExpS1 != tipo_string){
+            else if (tipo_ExpS == TIPO_STRING && tipo_ExpS1 != TIPO_STRING){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // numero - numero
-            else if ((tipo_ExpS == tipo_inteiro || tipo_ExpS == tipo_float) && (tipo_ExpS1 != tipo_inteiro && tipo_ExpS1 != tipo_float)){
+            else if ((tipo_ExpS == TIPO_INTEIRO || tipo_ExpS == TIPO_REAL) && (tipo_ExpS1 != TIPO_INTEIRO && tipo_ExpS1 != TIPO_REAL)){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // nao houve erro, atribui tipo correto
-            else tipo_ExpS = tipo_boolean;
+            else tipo_ExpS = TIPO_BOOLEAN;
 
             /* GERAÇÃO DE CÓDIGO (>) */
             // ambos operandos sao inteiros
-            if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
+            if(tipo_ExpS_aux == TIPO_INTEIRO && tipo_ExpS1 == TIPO_INTEIRO){
                 codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
                 codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
@@ -2488,9 +2494,9 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
                 codigo_asm.append("\tmov [qword M+" + int2hex(end_ExpS) + "], eax\t\t; guarda resultado\n");
             }
             // pelo menos um operando eh float
-            if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
+            if(tipo_ExpS_aux == TIPO_REAL || tipo_ExpS1 == TIPO_REAL){
                 // ExpS eh inteiro
-                if(tipo_ExpS_aux == tipo_inteiro){
+                if(tipo_ExpS_aux == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ real\n");
                 }
@@ -2500,7 +2506,7 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
                 }
                 
                 // ExpS1 eh inteiro
-                if(tipo_ExpS1 == tipo_inteiro){
+                if(tipo_ExpS1 == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm1, eax \t\t; converte p/ real\n");
                 }
@@ -2523,7 +2529,7 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
                 codigo_asm.append("\tmov [qword M+" + int2hex(end_ExpS) + "], eax\t\t; carrega ExpS.end\n");
             }
             // ambos operandos sao caracteres
-            if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
+            if(tipo_ExpS_aux == TIPO_CARACTER && tipo_ExpS1 == TIPO_CARACTER){
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=0\n");
                 codigo_asm.append("\tmov ebx,0 \t\t; ebx:=0\n");
                 codigo_asm.append("\tmov al, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
@@ -2543,29 +2549,29 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
 
         break;
 
-        case TK_menor:
-            casaToken(TK_menor);
+        case TK_MENOR:
+            casaToken(TK_MENOR);
             ExpS(&tipo_ExpS1, &tamanho_ExpS1, &end_ExpS1);
 
             // verifica tipos dos termos a serem comparados
             // char - char
-            if (tipo_ExpS == tipo_caractere && tipo_ExpS1 != tipo_caractere){
+            if (tipo_ExpS == TIPO_CARACTER && tipo_ExpS1 != TIPO_CARACTER){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // string - string
-            else if (tipo_ExpS == tipo_string && tipo_ExpS1 != tipo_string){
+            else if (tipo_ExpS == TIPO_STRING && tipo_ExpS1 != TIPO_STRING){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // numero - numero
-            else if ((tipo_ExpS == tipo_inteiro || tipo_ExpS == tipo_float) && (tipo_ExpS1 != tipo_inteiro && tipo_ExpS1 != tipo_float)){
+            else if ((tipo_ExpS == TIPO_INTEIRO || tipo_ExpS == TIPO_REAL) && (tipo_ExpS1 != TIPO_INTEIRO && tipo_ExpS1 != TIPO_REAL)){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // nao houve erro, atribui tipo correto
-            else tipo_ExpS = tipo_boolean;
+            else tipo_ExpS = TIPO_BOOLEAN;
 
             /* GERAÇÃO DE CÓDIGO (<) */
             // ambos inteiros
-            if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
+            if(tipo_ExpS_aux == TIPO_INTEIRO && tipo_ExpS1 == TIPO_INTEIRO){
                 codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
                 codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
@@ -2582,9 +2588,9 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             }
 
             // pelo menos um operando eh float
-            if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
+            if(tipo_ExpS_aux == TIPO_REAL || tipo_ExpS1 == TIPO_REAL){
                 // ExpS eh inteiro
-                if(tipo_ExpS_aux == tipo_inteiro){
+                if(tipo_ExpS_aux == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ real\n");
                 }
@@ -2594,7 +2600,7 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
                 }
                 
                 // ExpS1 eh inteiro
-                if(tipo_ExpS1 == tipo_inteiro){
+                if(tipo_ExpS1 == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm1, eax \t\t; converte p/ real\n");
                 }
@@ -2617,7 +2623,7 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
                 codigo_asm.append("\tmov [qword M+" + int2hex(end_ExpS) + "], eax\t\t; armazenar exp1.end\n");
             }
             // ambos operandos sao caracteres
-            if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
+            if(tipo_ExpS_aux == TIPO_CARACTER && tipo_ExpS1 == TIPO_CARACTER){
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=0\n");
                 codigo_asm.append("\tmov ebx,0 \t\t; ebx:=0\n");
                 codigo_asm.append("\tmov al, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
@@ -2637,29 +2643,29 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
 
         break;
 
-        case TK_menorIgual:
-            casaToken(TK_menorIgual);
+        case TK_MENOR_IGUAL:
+            casaToken(TK_MENOR_IGUAL);
             ExpS(&tipo_ExpS1, &tamanho_ExpS1, &end_ExpS1);
 
             // verifica tipos dos termos a serem comparados
             // char - char
-            if (tipo_ExpS == tipo_caractere && tipo_ExpS1 != tipo_caractere){
+            if (tipo_ExpS == TIPO_CARACTER && tipo_ExpS1 != TIPO_CARACTER){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // string - string
-            else if (tipo_ExpS == tipo_string && tipo_ExpS1 != tipo_string){
+            else if (tipo_ExpS == TIPO_STRING && tipo_ExpS1 != TIPO_STRING){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // numero - numero
-            else if ((tipo_ExpS == tipo_inteiro || tipo_ExpS == tipo_float) && (tipo_ExpS1 != tipo_inteiro && tipo_ExpS1 != tipo_float)){
+            else if ((tipo_ExpS == TIPO_INTEIRO || tipo_ExpS == TIPO_REAL) && (tipo_ExpS1 != TIPO_INTEIRO && tipo_ExpS1 != TIPO_REAL)){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // nao houve erro, atribui tipo correto
-            else tipo_ExpS = tipo_boolean;
+            else tipo_ExpS = TIPO_BOOLEAN;
 
             /* GERAÇÃO DE CÓDIGO (<=) */
             // ambos operandos sao inteiros
-            if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
+            if(tipo_ExpS_aux == TIPO_INTEIRO && tipo_ExpS1 == TIPO_INTEIRO){
                 codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
                 codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
@@ -2676,9 +2682,9 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             }
 
             // pelo menos um operando eh float
-            if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
+            if(tipo_ExpS_aux == TIPO_REAL || tipo_ExpS1 == TIPO_REAL){
                 // ExpS eh inteiro
-                if(tipo_ExpS_aux == tipo_inteiro){
+                if(tipo_ExpS_aux == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ real\n");
                 }
@@ -2688,7 +2694,7 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
                 }
                 
                 // ExpS1 eh inteiro
-                if(tipo_ExpS1 == tipo_inteiro){
+                if(tipo_ExpS1 == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm1, eax \t\t; converte p/ real\n");
                 }
@@ -2712,7 +2718,7 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             }
 
             // ambos operandos sao caracteres
-            if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
+            if(tipo_ExpS_aux == TIPO_CARACTER && tipo_ExpS1 == TIPO_CARACTER){
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=0\n");
                 codigo_asm.append("\tmov ebx,0 \t\t; ebx:=0\n");
                 codigo_asm.append("\tmov al, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
@@ -2732,29 +2738,29 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
 
         break;
 
-        case TK_maiorIgual:
-            casaToken(TK_maiorIgual);
+        case TK_MAIOR_IGUAL:
+            casaToken(TK_MAIOR_IGUAL);
             ExpS(&tipo_ExpS1, &tamanho_ExpS1, &end_ExpS1);
 
             // verifica tipos dos termos a serem comparados
             // char - char
-            if (tipo_ExpS == tipo_caractere && tipo_ExpS1 != tipo_caractere){
+            if (tipo_ExpS == TIPO_CARACTER && tipo_ExpS1 != TIPO_CARACTER){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // string - string
-            else if (tipo_ExpS == tipo_string && tipo_ExpS1 != tipo_string){
+            else if (tipo_ExpS == TIPO_STRING && tipo_ExpS1 != TIPO_STRING){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // numero - numero
-            else if ((tipo_ExpS == tipo_inteiro || tipo_ExpS == tipo_float) && (tipo_ExpS1 != tipo_inteiro && tipo_ExpS1 != tipo_float)){
+            else if ((tipo_ExpS == TIPO_INTEIRO || tipo_ExpS == TIPO_REAL) && (tipo_ExpS1 != TIPO_INTEIRO && tipo_ExpS1 != TIPO_REAL)){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // nao houve erro, atribui tipo correto
-            else tipo_ExpS = tipo_boolean;
+            else tipo_ExpS = TIPO_BOOLEAN;
 
             /* GERAÇÃO DE CÓDIGO (>=) */
             // ambos operandos sao inteiros
-            if(tipo_ExpS_aux == tipo_inteiro && tipo_ExpS1 == tipo_inteiro){
+            if(tipo_ExpS_aux == TIPO_INTEIRO && tipo_ExpS1 == TIPO_INTEIRO){
                 codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
                 codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em ebx\n");
                 codigo_asm.append("\tcmp eax,ebx\t\t; faz comparacao (ExpS e ExpS1)\n");
@@ -2771,9 +2777,9 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             }
 
             // pelo menos um operando eh float
-            if(tipo_ExpS_aux == tipo_float || tipo_ExpS1 == tipo_float){
+            if(tipo_ExpS_aux == TIPO_REAL || tipo_ExpS1 == TIPO_REAL){
                 // ExpS eh inteiro
-                if(tipo_ExpS_aux == tipo_inteiro){
+                if(tipo_ExpS_aux == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega [ExpS.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ real\n");
                 }
@@ -2783,7 +2789,7 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
                 }
                 
                 // ExpS1 eh inteiro
-                if(tipo_ExpS1 == tipo_inteiro){
+                if(tipo_ExpS1 == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_ExpS1) + "]\t\t; carrega [ExpS1.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm1, eax \t\t; converte p/ real\n");
                 }
@@ -2807,7 +2813,7 @@ void Exp(int* tipo_Exp, int* tamanho_Exp, int* end_Exp){
             }
 
             // ambos operandos sao caracteres
-            if(tipo_ExpS_aux == tipo_caractere && tipo_ExpS1 == tipo_caractere){
+            if(tipo_ExpS_aux == TIPO_CARACTER && tipo_ExpS1 == TIPO_CARACTER){
                 codigo_asm.append("\tmov eax,0 \t\t; eax:=0\n");
                 codigo_asm.append("\tmov ebx,0 \t\t; ebx:=0\n");
                 codigo_asm.append("\tmov al, [qword M+" + int2hex(end_ExpS) + "]\t\t; carrega ExpS.end\n");
@@ -2848,9 +2854,9 @@ void ExpS(int* tipo_ExpS, int* tamanho_ExpS, int* end_ExpS) {
     bool adicao = false;
     bool subtracao = false;	
 
-    if (registroLexico.token == TK_menos){	
+    if (registroLexico.token == TK_MENOS){	
         subtracao = true;	
-        casaToken(TK_menos);	
+        casaToken(TK_MENOS);
     }
 
     T(&tipo_T, &tamanho_T, &end_T);
@@ -2859,13 +2865,13 @@ void ExpS(int* tipo_ExpS, int* tamanho_ExpS, int* end_ExpS) {
     if (subtracao) {
 
         // Se não for um número, dá erro
-        if (tipo_T != tipo_inteiro && tipo_T != tipo_float)
+        if (tipo_T != TIPO_INTEIRO && tipo_T != TIPO_REAL)
             showError(INCOMPATIBLE_TYPES, "");
 
         // Se for, inverte o sinal e salva o resultado
         else {
             end_aux = novo_temp(4);
-            if (tipo_T == tipo_inteiro) {
+            if (tipo_T == TIPO_INTEIRO) {
                 codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_T) + "] \t\t; carrega [T.end] em eax\n");
                 codigo_asm.append("\tneg eax \t\t; nega valor de eax \n");
                 codigo_asm.append("\tmov [qword M+" + int2hex(end_aux) + "],eax \t\t; copia resultado p/ novo endereco\n");
@@ -2881,29 +2887,29 @@ void ExpS(int* tipo_ExpS, int* tamanho_ExpS, int* end_ExpS) {
         }
     }
 
-    while (registroLexico.token == TK_mais || registroLexico.token == TK_menos || registroLexico.token == TK_or) {	
+    while (registroLexico.token == TK_MAIS || registroLexico.token == TK_MENOS || registroLexico.token == TK_OR) {	
         subtracao = adicao = false;	
         switch (registroLexico.token){	
-            case TK_mais:	
+            case TK_MAIS:	
                 casaToken(registroLexico.token);	
                 // o termo deve ser um numero	
-                if (tipo_T != tipo_inteiro && tipo_T != tipo_float){	
+                if (tipo_T != TIPO_INTEIRO && tipo_T != TIPO_REAL){	
                     showError(INCOMPATIBLE_TYPES, "");	
                 }	
                 adicao = true;	
                 break;	
-            case TK_menos:	
+            case TK_MENOS:	
                 casaToken(registroLexico.token);	
                 // o termo deve ser um numero	
-                if (tipo_T != tipo_inteiro && tipo_T != tipo_float){	
+                if (tipo_T != TIPO_INTEIRO && tipo_T != TIPO_REAL){	
                     showError(INCOMPATIBLE_TYPES, "");	
                 }	
                 subtracao = true;	
                 break;	
-            case TK_or:	
+            case TK_OR:	
                 casaToken(registroLexico.token);	
                 // o termo deve ser logico	
-                if (tipo_T != tipo_boolean){	
+                if (tipo_T != TIPO_BOOLEAN){	
                     showError(INCOMPATIBLE_TYPES, "");	
                 }	
                 break;	
@@ -2915,19 +2921,19 @@ void ExpS(int* tipo_ExpS, int* tamanho_ExpS, int* end_ExpS) {
 
         // checa tipos para +, -, ||	
         if (adicao || subtracao){	
-            if (tipo_T1 != tipo_inteiro && tipo_T1 != tipo_float){	
+            if (tipo_T1 != TIPO_INTEIRO && tipo_T1 != TIPO_REAL){	
                 showError(INCOMPATIBLE_TYPES, "");	
             }	
-            else if (tipo_T == tipo_inteiro && tipo_T1 == tipo_inteiro){	
-                tipo_T = tipo_inteiro;	
+            else if (tipo_T == TIPO_INTEIRO && tipo_T1 == TIPO_INTEIRO){	
+                tipo_T = TIPO_INTEIRO;	
             }	
             else{	
-                tipo_T = tipo_float;	
+                tipo_T = TIPO_REAL;	
             }	
         }	
         // checa tipos p/ || 
         // ERRO se um termo for logico e o outro nao	
-        else if (tipo_T == tipo_boolean && tipo_T1 != tipo_boolean){	
+        else if (tipo_T == TIPO_BOOLEAN && tipo_T1 != TIPO_BOOLEAN){	
             showError(INCOMPATIBLE_TYPES, "");	
         }
 
@@ -2935,7 +2941,7 @@ void ExpS(int* tipo_ExpS, int* tamanho_ExpS, int* end_ExpS) {
         end_aux = novo_temp(4);
         if (adicao || subtracao){
             // se resultado da operacao for um inteiro, ambos operandos (T e T1) sao inteiros
-            if (tipo_T == tipo_inteiro){
+            if (tipo_T == TIPO_INTEIRO){
                 codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_T) + "]\t\t; carrega [T.end] em eax\n");
                 codigo_asm.append("\tmov ebx, [qword M+" + int2hex(end_T1) + "]\t\t; carrega [T1.end] em ebx\n");
                 
@@ -2951,7 +2957,7 @@ void ExpS(int* tipo_ExpS, int* tamanho_ExpS, int* end_ExpS) {
             // se resultado eh float, pelo menos um operando eh float
             else{
                 // T eh inteiro
-                if(tipo_T_aux == tipo_inteiro){
+                if(tipo_T_aux == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_T) + "]\t\t; carrega [T.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte eax p/ real\n");
                 }
@@ -2960,7 +2966,7 @@ void ExpS(int* tipo_ExpS, int* tamanho_ExpS, int* end_ExpS) {
                     codigo_asm.append("\tmovss xmm0, [qword M+" + int2hex(end_T) + "]\t\t; carrega [T.end] em xmm0\n");
                 }
                 // T1 eh inteiro
-                if(tipo_T1 == tipo_inteiro){
+                if(tipo_T1 == TIPO_INTEIRO){
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_T1) + "]\t\t; carrega [T1.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm1, eax\t\t; converte reg para real\n");
                 }
@@ -2994,6 +3000,7 @@ void ExpS(int* tipo_ExpS, int* tamanho_ExpS, int* end_ExpS) {
     }// fim while	
     
     *tipo_ExpS = tipo_T;
+
     *tamanho_ExpS = tamanho_T;
     *end_ExpS = end_T;
 }
@@ -3010,42 +3017,42 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
     F(&tipo_F, &tamanho_F, &end_F);
     
     while (
-        registroLexico.token == TK_asterisco || 
-        registroLexico.token == TK_and       || 
-        registroLexico.token == TK_barra     || 
-        registroLexico.token == TK_div       || 
-        registroLexico.token == TK_mod
+        registroLexico.token == TK_ASTERISCO || 
+        registroLexico.token == TK_AND       || 
+        registroLexico.token == TK_BARRA     || 
+        registroLexico.token == TK_DIV       || 
+        registroLexico.token == TK_MOD
     ) {
         multiplicacao = and_logico = divisao = div = mod = false;
 
         switch(registroLexico.token){
-            case TK_barra:
+            case TK_BARRA:
                 casaToken(registroLexico.token);
 
                 // ERRO se fator nao for numero
-                if (tipo_F != tipo_inteiro && tipo_F != tipo_float){
+                if (tipo_F != TIPO_INTEIRO && tipo_F != TIPO_REAL){
                     showError(INCOMPATIBLE_TYPES, "");
                 }
 
                 divisao = true;
                 break;
                 
-            case TK_asterisco:
+            case TK_ASTERISCO:
                 casaToken(registroLexico.token);
 
                 // ERRO se fator nao for numero
-                if (tipo_F != tipo_inteiro && tipo_F != tipo_float){
+                if (tipo_F != TIPO_INTEIRO && tipo_F != TIPO_REAL){
                     showError(INCOMPATIBLE_TYPES, "");
                 }
 
                 multiplicacao = true;
                 break;
 
-            case TK_and:
+            case TK_AND:
                 casaToken(registroLexico.token);
 
                 // ERRO se fator nao for logico
-                if (tipo_F != tipo_boolean){
+                if (tipo_F != TIPO_BOOLEAN){
                     showError(INCOMPATIBLE_TYPES, "");
                 }
 
@@ -3053,22 +3060,22 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
                 break;
 
 
-            case TK_div:
+            case TK_DIV:
                 casaToken(registroLexico.token);
 
                 // ERRO se fator nao for um numero inteiro
-                if (tipo_F != tipo_inteiro){
+                if (tipo_F != TIPO_INTEIRO){
                     showError(INCOMPATIBLE_TYPES, "");
                 }
 
                 div = true;
                 break;
 
-            case TK_mod:
+            case TK_MOD:
                 casaToken(registroLexico.token);
                 
                 // ERRO se fator nao for um numero inteiro
-                if (tipo_F != tipo_inteiro){
+                if (tipo_F != TIPO_INTEIRO){
                     showError(INCOMPATIBLE_TYPES, "");
                 }
 
@@ -3081,12 +3088,12 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
         // checa *, /, &&, div, mod
         if (divisao || multiplicacao){
             // ERRO se n for um numero
-            if (tipo_F1 != tipo_inteiro && tipo_F1 != tipo_float){
+            if (tipo_F1 != TIPO_INTEIRO && tipo_F1 != TIPO_REAL){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             else if (divisao){
                 // ambos operandos inteiros
-                if (tipo_F == tipo_inteiro && tipo_F1 == tipo_inteiro){
+                if (tipo_F == TIPO_INTEIRO && tipo_F1 == TIPO_INTEIRO){
                     
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ float e armazena em xmm0\n");
@@ -3097,7 +3104,7 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
                     codigo_asm.append("\tmovss [qword M+" + int2hex(end_F) + "],xmm0 \t\t; copia resultado p/ [F.end]\n");
                 }
                 // apenas F for float
-                else if (tipo_F == tipo_float && tipo_F1 != tipo_float){
+                else if (tipo_F == TIPO_REAL && tipo_F1 != TIPO_REAL){
                     
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm1, eax\t\t; converte p/ float e armazena em xmm1\n");
@@ -3107,7 +3114,7 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
                     codigo_asm.append("\tmovss [qword M+" + int2hex(end_F) + "],xmm0 \t\t; copia resultado p/ [F.end]\n");
                 }
                 // apenas F1 for float
-                else if (tipo_F1 == tipo_float && tipo_F != tipo_float){
+                else if (tipo_F1 == TIPO_REAL && tipo_F != TIPO_REAL){
 
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ float e armazena em xmm0\n");
@@ -3127,11 +3134,11 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
                 }
                 
                 // resultado eh real se for divisao
-                tipo_F = tipo_float;
+                tipo_F = TIPO_REAL;
             }
             // multiplicacao
             // ambos fatores inteiros
-            else if (tipo_F == tipo_inteiro && tipo_F1 == tipo_inteiro){
+            else if (tipo_F == TIPO_INTEIRO && tipo_F1 == TIPO_INTEIRO){
 
                 /* GERAÇÃO DE CÓDIGO */
                 
@@ -3143,12 +3150,12 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
                 codigo_asm.append("\tmov [qword M+" + int2hex(end_F) + "],eax \t\t; copia resultado p/ [F.end]\n");
                 
                 // resultado inteiro se ambos fatores inteiros
-                tipo_F = tipo_inteiro;
+                tipo_F = TIPO_INTEIRO;
             }
             // pelo menos um fator real
             else{
                 // apenas F for float
-                if (tipo_F == tipo_float && tipo_F1 != tipo_float){
+                if (tipo_F == TIPO_REAL && tipo_F1 != TIPO_REAL){
                     
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_F1) + "]\t\t; carrega [F1.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm1, eax\t\t; converte p/ float e armazena em xmm1\n");
@@ -3158,7 +3165,7 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
                     codigo_asm.append("\tmovss [qword M+" + int2hex(end_F) + "],xmm0 \t\t; copia resultado p/ [F.end]\n");
                 }
                 // apenas F1 for float
-                else if (tipo_F1 == tipo_float && tipo_F != tipo_float){
+                else if (tipo_F1 == TIPO_REAL && tipo_F != TIPO_REAL){
                     
                     codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_F) + "]\t\t; carrega [F.end] em eax\n");
                     codigo_asm.append("\tcvtsi2ss xmm0, eax\t\t; converte p/ float e armazena em xmm0\n");
@@ -3177,12 +3184,12 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
                 }
                 
                 // resultado eh real se pelo menos um fator for real
-                tipo_F = tipo_float;
+                tipo_F = TIPO_REAL;
             }
         }
         else if (and_logico){ 
             // && exige que os 2 fatores sejam logicos
-            if (tipo_F == tipo_boolean && tipo_F1 != tipo_boolean){
+            if (tipo_F == TIPO_BOOLEAN && tipo_F1 != TIPO_BOOLEAN){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // faz o &&
@@ -3197,7 +3204,7 @@ void T(int* tipo_T, int* tamanho_T, int* end_T) {
         }
         else if (div || mod){ 
             // div e mod exigem que os 2 fatores sejam inteiros
-            if (tipo_F == tipo_inteiro && tipo_F1 != tipo_inteiro){
+            if (tipo_F == TIPO_INTEIRO && tipo_F1 != TIPO_INTEIRO){
                 showError(INCOMPATIBLE_TYPES, "");
             }
             // faz o div
@@ -3234,23 +3241,23 @@ void F(int* tipo_F, int* tamanho_F, int* end_F) {
     int tipo_Exp, tamanho_Exp, end_Exp;
 
     // constante
-    if (registroLexico.token == TK_const) {
+    if (registroLexico.token == TK_CONST) {
         RegLex rl_const = registroLexico;
         *tipo_F = registroLexico.tipo;
-        casaToken(TK_const);
+        casaToken(TK_CONST);
 
         /* GERAÇÃO DE CÓDIGO */	
         // faz a reserva de memoria p/ a constante	
         int end_aux;	
-        if (*tipo_F == tipo_inteiro) {	
+        if (*tipo_F == TIPO_INTEIRO) {	
             end_aux = novo_temp(4); 	
             codigo_asm.append("\tmov eax," + rl_const.lexema + "\t\t; carrega a constante inteira em eax\n");	
             codigo_asm.append("\tmov [qword M+" + int2hex(end_aux) + "], eax \t\t; o novo endereco recebe o valor da constante\n");	
-        } else if (*tipo_F == tipo_caractere) {	
+        } else if (*tipo_F == TIPO_CARACTER) {	
             end_aux = novo_temp(1); 	
             codigo_asm.append("\tmov al," + rl_const.lexema + "\t\t; carrega a constante char em eax\n");	
             codigo_asm.append("\tmov [qword M+" + int2hex(end_aux) + "], al \t\t; o novo endereco recebe o valor da constante\n");	
-        } else if (*tipo_F == tipo_float) {	
+        } else if (*tipo_F == TIPO_REAL) {	
             codigo_asm.append("\nsection .data \t\t; seção de dados\n");	
             // adiciona 0 se o numero comecar com .
             if (rl_const.lexema[0] == '.') rl_const.lexema = '0' + rl_const.lexema;	
@@ -3271,30 +3278,30 @@ void F(int* tipo_F, int* tamanho_F, int* end_F) {
     }
 
     // (int | float) "(" Exp ")"
-    else if (registroLexico.token == TK_int || registroLexico.token == TK_float) {
-        if (registroLexico.token == TK_int) {
-            casaToken(TK_int);
-            *tipo_F = tipo_inteiro;
+    else if (registroLexico.token == TK_INT || registroLexico.token == TK_FLOAT) {
+        if (registroLexico.token == TK_INT) {
+            casaToken(TK_INT);
+            *tipo_F = TIPO_INTEIRO;
         }
         else {
-            casaToken(TK_float);
-            *tipo_F = tipo_float;
+            casaToken(TK_FLOAT);
+            *tipo_F = TIPO_REAL;
         }
-        casaToken(TK_abreParentese);
+        casaToken(TK_ABRE_PARENTESE);
         
         Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
-        if (tipo_Exp != tipo_inteiro && tipo_Exp != tipo_float)
+        if (tipo_Exp != TIPO_INTEIRO && tipo_Exp != TIPO_REAL)
             showError(INCOMPATIBLE_TYPES, "");
 
-        casaToken(TK_fechaParentese);
+        casaToken(TK_FECHA_PARENTESE);
 
         /* GERAÇÃO DE CÓDIGO */
         // converte Exp p/ int ou float
         int end_aux = novo_temp(4);
         // convertendo p/ int
-        if (*tipo_F == tipo_inteiro) {
+        if (*tipo_F == TIPO_INTEIRO) {
             // Exp eh int, apenas guarda no novo end
-            if (tipo_Exp == tipo_inteiro) {
+            if (tipo_Exp == TIPO_INTEIRO) {
                 codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_Exp) + "] \t\t; carrega [Exp.end] em eax\n");
                 codigo_asm.append("\tmov [qword M+" + int2hex(end_aux) + "],eax \t\t; guarda valor no novo endereco\n");
             }
@@ -3309,7 +3316,7 @@ void F(int* tipo_F, int* tamanho_F, int* end_F) {
         // convertendo p/ real
         else {
             // Exp eh int, converte p/ float
-            if (tipo_Exp == tipo_inteiro) {
+            if (tipo_Exp == TIPO_INTEIRO) {
                 codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_Exp) + "]\t\t; carrega [Exp.end] em eax\n");
                 codigo_asm.append("\tcvtsi2ss xmm0, eax \t\t; converte p/ real e guarda em xmm0\n");
                 codigo_asm.append("\tmovss [qword M+" + int2hex(end_aux) + "],xmm0 \t\t; guarda valor no novo endereco\n");
@@ -3326,8 +3333,8 @@ void F(int* tipo_F, int* tamanho_F, int* end_F) {
     }
 
     // "(" Exp ")"
-    else if (registroLexico.token == TK_abreParentese) {
-        casaToken(TK_abreParentese);
+    else if (registroLexico.token == TK_ABRE_PARENTESE) {
+        casaToken(TK_ABRE_PARENTESE);
         
         Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
         *tipo_F = tipo_Exp;
@@ -3335,22 +3342,17 @@ void F(int* tipo_F, int* tamanho_F, int* end_F) {
         // Endereço de F recebe o endereço de Exp
         *end_F = end_Exp;
 
-        casaToken(TK_fechaParentese);
+        casaToken(TK_FECHA_PARENTESE);
     }
 
     // id [ "[" Exp "]" ]
-    else if (registroLexico.token == TK_id) {
+    else if (registroLexico.token == TK_ID) {
         string lex_id = registroLexico.lexema;
-        casaToken(TK_id);
+        casaToken(TK_ID);
         
         // Verifica se é um id que ainda não foi declarado
-        // cout << "Verificando o '" << lex_id << "'" << endl;
         Simbolo simb_id = tab_simbolos.pesquisar(lex_id);
-        // cout << "Simb_id:" << endl;
-        // cout << simb_id.token << endl;
-        // cout << simb_id.tipo << endl;
-        // cout << simb_id.classe << endl;
-        if (simb_id.classe == classe_nula) {
+        if (simb_id.classe == CLASSE_VAZIA) {
             showError(UNDECLARED_ID, lex_id);
         } else {
             // Se foi declarado, pega as infos dele
@@ -3359,47 +3361,47 @@ void F(int* tipo_F, int* tamanho_F, int* end_F) {
             *end_F = simb_id.endereco;
         }
 
-        if (registroLexico.token == TK_abreColchete) {
-            casaToken(TK_abreColchete);
+        if (registroLexico.token == TK_ABRE_COLCHETE) {
+            casaToken(TK_ABRE_COLCHETE);
 
             // Se vai usar id[], o id tem que ser string
-            if (simb_id.tipo != tipo_string)
+            if (simb_id.tipo != TIPO_STRING)
                 showError(INCOMPATIBLE_TYPES, "");
 
             Exp(&tipo_Exp, &tamanho_Exp, &end_Exp);
 
             // Posição da string tem que ser um numero inteiro
-            if (tipo_Exp != tipo_inteiro)
+            if (tipo_Exp != TIPO_INTEIRO)
                 showError(INCOMPATIBLE_TYPES, "");
             else
-                *tipo_F = tipo_caractere;
+                *tipo_F = TIPO_CARACTER;
 
             /* GERAÇÃO DE CÓDIGO */
             // guarda o novo char na posicao da string, indicada por Exp
             int end_aux = novo_temp(1);
-            codigo_asm.append("\tmov rax,qword M+" + int2hex(*end_F) + "\t\t; carrega [F.end] (inicio da string) em rax\n");
-            codigo_asm.append("\tmov rbx,0 \t\t; rbx:=0\n");
-            codigo_asm.append("\tmov rbx, [qword M+" + int2hex(end_Exp) + "] \t\t; rbx recebe posicao do char\n");
-            codigo_asm.append("\tadd rax,rbx \t\t; soma inicio da string com posicao do char\n");
-            codigo_asm.append("\tmov bl, [rax] \t\t; guarda o char em bl\n");
+            codigo_asm.append("\tmov rsi,qword M+" + int2hex(*end_F) + "\t\t; carrega [F.end] (inicio da string) em rsi\n");
+            codigo_asm.append("\tmov rax,0 \t\t; rax:=0\n");
+            codigo_asm.append("\tmov eax, [qword M+" + int2hex(end_Exp) + "] \t\t; eax recebe posicao do char\n");
+            codigo_asm.append("\tadd rsi, rax \t\t; soma inicio da string com posicao do char\n");
+            codigo_asm.append("\tmov bl, [rsi] \t\t; guarda o char em bl\n");
             codigo_asm.append("\tmov [qword M+" + int2hex(end_aux) + "],bl \t\t; guarda char no novo endereco\n");
 
             *tamanho_F = 1; // tamanho de F = tamanho do char (1byte)
             *end_F = end_aux; 
 
-            casaToken(TK_fechaColchete);
+            casaToken(TK_FECHA_COLCHETE);
         }
     }
 
     // ! F1
-    else if (registroLexico.token == TK_not) {
+    else if (registroLexico.token == TK_NOT) {
         int tipo_F1, tamanho_F1, end_F1;
-        casaToken(TK_not);
+        casaToken(TK_NOT);
         
         F(&tipo_F1, &tamanho_F1, &end_F1);
 
         // O tipo de F1 tem que ser lógico
-        if (tipo_F1 != tipo_boolean) showError(INCOMPATIBLE_TYPES, "");
+        if (tipo_F1 != TIPO_BOOLEAN) showError(INCOMPATIBLE_TYPES, "");
         else *tipo_F = tipo_F1;
 
         /* GERAÇÃO DE CÓDIGO */

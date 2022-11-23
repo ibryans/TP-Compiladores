@@ -16,7 +16,7 @@ F:   "(" Exp (4) ")" (GC3)
 F:   id (5) (GC4) [ "[" (6) Exp (7) "]" (GC5)]
 F:   ! F1 (8) (GC6)
 
-Esquema de Tradução
+-- Esquema de Tradução --
 
 OBS: Para simplificar, a notação [x] significa [qword M+x]
 
@@ -82,9 +82,6 @@ OBS: Para simplificar, a notação [x] significa [qword M+x]
 
 (GC13) { limpa area de temporarios }
 
-(GC14) { }
-
-(GC15) { } 
 
 (GC16) { Cria um buffer para a entrada (NovoTemp de 256 bytes) }
        { realiza a chamada de leitura de acordo com o sistema operacional }
